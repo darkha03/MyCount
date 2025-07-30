@@ -1,0 +1,113 @@
+{% extends "layout.html" %}
+
+{% block title %}Plans{% endblock %}
+{% block content %}
+  <h2>Your Plans (from Blueprint Template)</h2>
+  <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addPlanModal">Create New Plan</button>
+  <ul id="plan-list" class="list-group">
+    
+  </ul>
+  <!-- Modal for adding new plan -->
+  <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="add-plan-form">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addPlanLabel">Create a New Plan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="plan-name" class="form-label">Plan Name</label>
+              <input type="text" class="form-control" id="plan-name" required>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label">Participants</label>
+              <div id="participants-list">
+                <input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1">
+              </div>
+              <button type="button" id="add-participant-btn" class="btn btn-sm btn-outline-primary">+ Add Participant</button>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Save Plan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const list = document.getElementById("plan-list");
+    const form = document.getElementById("add-plan-form");
+    const input = document.getElementById("plan-name");
+    const participantsList = document.getElementById("participants-list");
+    const addParticipantBtn = document.getElementById("add-participant-btn");
+
+    function loadPlans() {
+      fetch("/plans/api/plans")
+        .then(res => res.json())
+        .then(data => {
+          list.innerHTML = "";
+          data.forEach(plan => {
+            const li = document.createElement("li");
+            li.className = "list-group-item d-flex justify-content-between align-items-center";
+            li.style.cursor = "pointer";
+            li.onclick = () => {
+              window.location.href = `/plans/${plan.hash_id}`;
+            };
+            li.innerHTML = `
+              ${plan.name}
+              <button class="btn btn-sm btn-danger" onclick="deletePlan(${plan.id})">Delete</button>
+            `;
+            const deleteBtn = li.querySelector("button");
+            deleteBtn.onclick = (e) => {
+              e.stopPropagation(); // prevent <li> redirect when delete is clicked
+              deletePlan(plan.id);
+            };
+            list.appendChild(li);
+          });
+        });
+    }
+
+    window.deletePlan = function(id) {
+      fetch(`/plans/api/plans/${id}`, { method: "DELETE" }).then(loadPlans);
+    };
+
+    addParticipantBtn.onclick = () => {
+      const count = participantsList.querySelectorAll('.participant-input').length + 1;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "form-control mb-2 participant-input";
+      input.placeholder = `Participant ${count}`;
+      participantsList.appendChild(input);
+    };
+
+    form.onsubmit = e => {
+      e.preventDefault();
+      const planName = input.value;
+      const participantInputs = document.querySelectorAll(".participant-input");
+      const participants = Array.from(participantInputs).map(p => p.value.trim()).filter(Boolean);
+
+      fetch("/plans/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: planName, participants })
+      }).then(() => {
+        input.value = "";
+        participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1">';
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addPlanModal'));
+        modal.hide();
+        loadPlans();
+      });
+    };
+
+    loadPlans();
+  });
+  </script>
+
+{% endblock %}

@@ -1,0 +1,36 @@
+<h5>Statistics</h5>
+<p>This will list all statistics in the plan.</p>
+
+<ul class="list-group">
+{% for participant, amount in balances.items() %}
+<div class="statistics-item">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+    <h6>{{ participant }}</h6>
+    <p>Amount: {{ amount }}</p>
+    </li>
+</div>
+{% endfor %}
+</ul>
+
+<p>This will list the total expenses of each participant.</p>
+<ul class="list-group">
+{% for participant, amount in total_expense.items() %}
+<div class="expense-item">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+    <h6>{{ participant }}</h6>
+    <p>Total Expense: {{ amount }}</p>
+    </li>
+</div>
+{% endfor %}
+</ul>
+<p>This will list the real expenses of each participant.</p>
+<ul class="list-group">
+{% for participant, amount in real_expense.items() %}   
+<div class="expense-item">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+    <h6>{{ participant }}</h6>
+    <p>Real Expense: {{ amount }}</p>
+    </li>
+</div>
+{% endfor %}    
+</ul>

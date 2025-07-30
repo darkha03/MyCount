@@ -1,0 +1,21 @@
+<h5>Reimbursements</h5>
+
+
+{% if reimbursements %}
+<ul class="list-group">
+    {% for reimbursement in reimbursements %}
+    <div class="reimbursement-item">
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <h6>From {{ reimbursement.from }}</h6>
+            <p>to: {{ reimbursement.to }}</p>
+            <p>Amount: {{ reimbursement.amount }}</p>
+            <button class="btn btn-sm btn-outline-primary paid-btn">Is paid</button>
+        </li>
+    </div>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="alert alert-info mt-3">
+    All balances are settled. No reimbursement needed!
+  </div>
+{% endif %}

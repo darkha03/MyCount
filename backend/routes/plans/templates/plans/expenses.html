@@ -1,0 +1,73 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5>Expenses</h5>
+  <button class="btn btn-primary" id="addExpenseBtn" data-bs-toggle="modal" data-bs-target="#addExpenseModal">Add Expense</button>
+</div>
+<p>This will list all expenses in the expense.</p>
+
+<ul class="list-group">
+{% for expense in expenses %}
+<div class="expense-item">
+    <li class="list-group-item d-flex justify-content-between align-items-center" style="cursor:pointer;" data-id= "{{ expense.id}}">
+    <h6>{{ expense.name }}</h6>
+    <p>Payed by: {{ expense.payer }}</p>
+    <p>Amount: {{ expense.amount }}</p>
+    </li>
+</div>
+{% endfor %}
+</ul>
+
+<div class="modal fade" id="addExpenseModal" tabindex="-1" aria-labelledby="addExpenseLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="add-expense-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addExpenseLabel">Create a New Expense</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="expense-name" class="form-label">Expense Name</label>
+            <input type="text" class="form-control" id="expense-name" required>
+          </div>
+          <div class="mb-3">
+            <label for="expense-amount" class="form-label">Amount</label>
+            <input type="float" class="form-control" id="expense-amount" required>
+          </div>
+          <div class="mb-3">
+            <label for="expense-payer" class="form-label">Payer</label>
+            <select class="form-control" id="expense-payer" required>
+              {% for participant in plan.participants %}
+              <option value="{{ participant }}">{{ participant }}</option>
+              {% endfor %}
+            </select>
+          </div>  
+          
+              <label class="form-label">Splits evenly</label>
+              <input type="checkbox" id="split-evenly" checked>
+          
+          <div class="mb-2">
+            <label class="form-label">Participants</label>
+            <div id="participants-list">
+              {% for participant in plan.participants %}
+              
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                  <input type="checkbox" class="form-check-input" checked>
+                  <input type="text" class="form-control mb-2 participant-input" value="{{ participant }}" placeholder="Participant">
+                  <input type="float" class="form-control mb-2 participant-amount" placeholder="Amount" value="0" step="0.01" min="0">
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+

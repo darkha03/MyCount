@@ -1,0 +1,88 @@
+{% block title %}Expense Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Expense Detail</h4>
+    <a href="/plans/{{ plan.hash_id }}" class="btn btn-outline-secondary">← Back to Expenses</a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">{{ expense.title }}</h5>
+      <p class="card-text">
+        <strong>Amount:</strong> {{ "%.2f"|format(expense.amount) }} € <br>
+        <strong>Date:</strong> {{ expense.date }} <br>
+        <strong>Payer:</strong> {{ expense.payer }} <br>
+        <strong>Participants:</strong>
+        <ul>
+          {% for participant, amount in expense.amount_details.items() %}
+            <li>{{ participant }} : {{ amount }}</li>
+          {% endfor %}
+        </ul>
+      </p>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modifyExpenseModal">
+          ✏️ Modify
+        </button>
+         <button class="btn btn-danger" data-id="{{expense.id}}" onclick="deleteExpense()">🗑️ Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modifyExpenseModal" tabindex="-1" aria-labelledby="addExpenseLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="add-expense-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addExpenseLabel">Create a New Expense</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="expense-name" class="form-label">Expense Name</label>
+            <input type="text" class="form-control" id="expense-name" value="{{ expense.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="expense-amount" class="form-label">Amount</label>
+            <input type="float" class="form-control" id="expense-amount" value="{{ expense.amount }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="expense-payer" class="form-label">Payer</label>
+            <select class="form-control" id="expense-payer" required>
+              {% for participant in plan.participants %}
+              <option value="{{ participant }}">{{ participant }}</option>
+              {% endfor %}
+            </select>
+          </div>  
+          
+              <label class="form-label">Splits evenly</label>
+              <input type="checkbox" id="split-evenly" unchecked>
+          
+          <div class="mb-2">
+            <label class="form-label">Participants</label>
+            <div id="participants-list">
+              {% for participant in plan.participants %}
+              
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                  <input type="checkbox" class="form-check-input" checked>
+                  <input type="text" class="form-control mb-2 participant-input" value="{{ participant }}" placeholder="Participant">
+                  <input type="float" class="form-control mb-2 participant-amount" placeholder="Amount" value={{expense.amount_details.get(participant, 0.0)}} step="0.01" min="0">
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block title %}{{ plan.name }}{% endblock %}
+
+{% block content %}
+<script src="{{ url_for('plans.static', filename='app.js') }}"></script>
+<div class="container-fluid mt-3">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-sm-12 border-end">
+      <h4>{{ plan.name }}</h4>
+      <ul class="nav flex-column nav-pills mt-4">
+        <li class="nav-item">
+          <a class="nav-link active" href="#" data-section="expenses">🧾 Expenses</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-section="reimbursements">💸 Reimbursements</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-section="statistics">📊 Statistics</a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="col-md-9 col-sm-12" id="plan-content"> 
+      <script>initExpensesSection("{{plan.hash_id}}");</script>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const navLinks = document.querySelectorAll(".col-md-3 .nav-link");
+  const content = document.getElementById("plan-content");
+  const planId = "{{ plan.hash_id }}";
+  console.log("Plan ID:", planId);
+  navLinks.forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      navLinks.forEach(l => l.classList.remove("active"));
+      link.classList.add("active");
+
+      const section = link.dataset.section;
+      fetch(`/plans/${planId}/section/${section}`)
+        .then(res => res.text())
+        .then(html => {
+          content.innerHTML = html;
+          if (section === "expenses") {
+            initExpensesSection(planId);
+          }
+          if (section === "reimbursements") {
+            initReimbursementSection(planId);
+          }
+        });
+    });
+  });
+});
+</script>
+{% endblock %}
