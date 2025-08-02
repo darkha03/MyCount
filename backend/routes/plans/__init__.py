@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, render_template
+from utils.auth import login_required
 import secrets
 
 def generate_hash_id(length=8):
@@ -24,12 +25,15 @@ expenses = [
 
 # Routes for plans management
 @plans_bp.route("/", methods=["GET"])
+@login_required
 def get_plans():
     return render_template("plans/dashboard.html")
 @plans_bp.route("/api/plans", methods=["GET"])
+@login_required
 def get_plans_api():
     return jsonify(plans)
 @plans_bp.route("/api/plans", methods=["POST"])
+@login_required
 def add_plan():
     data = request.get_json()
     new_id = max(p["id"] for p in plans) + 1 if plans else 1
@@ -37,6 +41,7 @@ def add_plan():
     plans.append(new_plan)
     return jsonify(new_plan), 201
 @plans_bp.route("/api/plans/<int:plan_id>", methods=["DELETE"])
+@login_required
 def delete_plan(plan_id):
     global plans
     plans = [p for p in plans if p["id"] != plan_id]
@@ -44,6 +49,7 @@ def delete_plan(plan_id):
 
 # Route to view a specific plan
 @plans_bp.route("/<hash_id>", methods=["GET"])
+@login_required
 def view_plan(hash_id):
     for plan in plans:
         if plan["hash_id"] == hash_id:
@@ -51,6 +57,7 @@ def view_plan(hash_id):
     return jsonify({"error": "Plan not found"}), 404
 
 @plans_bp.route("/api/plans/<hash_id>/expenses", methods=["GET"])
+@login_required
 def get_plan_expenses_api(hash_id):
     # This is a placeholder for actual expense retrieval logic
     for plan in plans:
@@ -61,6 +68,7 @@ def get_plan_expenses_api(hash_id):
     return jsonify({"error": "Plan not found"}), 404
 
 @plans_bp.route("/<hash_id>/section/expenses", methods=["GET"])
+@login_required
 def get_plan_expenses(hash_id):
     # This is a placeholder for actual expense retrieval logic
     for plan in plans:
@@ -70,6 +78,7 @@ def get_plan_expenses(hash_id):
             return render_template("plans/expenses.html", expenses=expenses, plan=plan)
 
 @plans_bp.route("/<hash_id>/section/expenses", methods=["POST"])
+@login_required
 def add_plan_expense(hash_id):
     data = request.get_json()
     global expenses
@@ -89,21 +98,39 @@ def add_plan_expense(hash_id):
     return jsonify(new_expense), 201
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["DELETE"])
+@login_required
 def delete_plan_expense(hash_id, expense_id):
     global expenses
     expenses = [e for e in expenses if e["id"] != expense_id]
     return jsonify({"message": f"Expense {expense_id} deleted."}), 200
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["PUT"])
+@login_required
 def update_plan_expense(hash_id, expense_id):
     data = request.get_json()
+    update_expense = {
+        "name": data["name"],
+        "amount": data["amount"],
+        "payer": data["payer"],
+        "participants": data["participants"],
+        "amount_details" : {
+            participant: float(amount)
+            for participant, amount in zip(data["participants"], data["amounts"])
+        }
+    }
     for expense in expenses:
         if expense["id"] == expense_id:
-            expense.update(data)
+            expense["name"] = update_expense["name"]
+            expense["amount"] = update_expense["amount"]
+            expense["payer"] = update_expense["payer"]
+            expense["participants"] = update_expense["participants"]
+            expense["amount_details"] = update_expense["amount_details"]
+            print(f"Expense {expense_id} updated: {expense}")
             return jsonify(expense), 200
     return jsonify({"error": "Expense not found"}), 404
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["GET"])
+@login_required
 def get_plan_expense(hash_id, expense_id):
     plan = next((p for p in plans if p["hash_id"] == hash_id), None)
     for expense in expenses:
@@ -149,6 +176,7 @@ def calculate_reimbursements(balances):
     return reimbursements
 
 @plans_bp.route("/<hash_id>/section/reimbursements", methods=["GET"])
+@login_required
 def get_plan_reimbursements(hash_id):
     # Placeholder for actual reimbursement retrieval logic
     global expenses
@@ -205,6 +233,7 @@ def calculate_real_expense(expenses):
     return real_expense
 
 @plans_bp.route("/<hash_id>/section/statistics", methods=["GET"])
+@login_required
 def get_plan_statistics(hash_id):
     # Placeholder for actual statistics retrieval logic
     global expenses

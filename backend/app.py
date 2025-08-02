@@ -1,14 +1,17 @@
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 from routes.plans import plans_bp
+from routes.auth import auth_bp
+
 
 
 
 app = Flask(__name__)
+app.secret_key = "your-very-secret-key"
 CORS(app)
 
 app.register_blueprint(plans_bp)
-
+app.register_blueprint(auth_bp)
 # Mock data for now
 expenses = [
     {
