@@ -21,6 +21,36 @@ def login():
             flash("Logged in successfully!", "success")
             return redirect(url_for("plans.get_plans"))
 
-        flash("Invalid credentials", "danger")
+        flash("Invalid email or password", "danger")
 
     return render_template("auth/login.html")
+
+@auth_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+        confirm_password = request.form["confirm_password"]
+
+        if password != confirm_password:
+            flash("Passwords do not match", "error")
+            return redirect(url_for("auth.register"))
+        if email in USERS:
+            flash("Email already registered", "error")
+            return redirect(url_for("auth.register"))
+        USERS[email] = {"password": password}  # In a real app, hash the password here
+        #hashed_password = generate_password_hash(password)
+        #db = get_db()
+        #db.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, hashed_password))
+        #db.commit()
+
+        flash("Account created successfully! Please log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/register.html")
+
+@auth_bp.route("/logout", methods=["POST", "GET"])
+def logout():
+    session.clear()  # remove all session data
+    return redirect(url_for("auth.login"))
+    
