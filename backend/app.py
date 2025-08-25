@@ -2,17 +2,22 @@ from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 from routes.plans import plans_bp
 from routes.auth import auth_bp
+from models import db, User, Plan, PlanParticipant, Expense
 
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config.Config')
+    db.init_app(app)
+    app.secret_key = "your-very-secret-key"
+    CORS(app)
+    with app.app_context():
+        db.create_all()
+    app.register_blueprint(plans_bp)    
+    app.register_blueprint(auth_bp)
+    return app
 
+app = create_app()
 
-
-app = Flask(__name__)
-app.secret_key = "your-very-secret-key"
-CORS(app)
-
-app.register_blueprint(plans_bp)
-app.register_blueprint(auth_bp)
-# Mock data for now
 expenses = [
     {
         "id": 1,

@@ -1,5 +1,5 @@
 from flask import Blueprint
-
+from models import db, User
 auth_bp = Blueprint("auth", __name__, template_folder="templates")
 
 from flask import render_template, request, redirect, url_for, session, flash
@@ -11,38 +11,49 @@ USERS = {
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":    
-        email = request.form.get("email")
+    if request.method == "POST":
+        username = request.form.get("username")
+        if not username:
+            flash("Username is required", "error")
+            return redirect(url_for("auth.login"))  
         password = request.form.get("password")
-
-        user = USERS.get(email)
-        if user and user["password"] == password:
-            session["user_email"] = email
+        if User.query.filter_by(username=username).first().check_password(password):
+            session["username"] = username
             flash("Logged in successfully!", "success")
             return redirect(url_for("plans.get_plans"))
-
-        flash("Invalid email or password", "danger")
+        else:
+            flash("Invalid username or password", "danger")
+            return redirect(url_for("auth.login"))
 
     return render_template("auth/login.html")
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        username = request.form["username"]
+        if not username:
+            flash("Username is required", "error")
+            return redirect(url_for("auth.register"))
+        if User.query.filter_by(username=username).first():
+            flash("Username already taken", "error")
+            return redirect(url_for("auth.register"))  
         email = request.form["email"]
+        if not email:
+            flash("Email is required", "error")
+            return redirect(url_for("auth.register"))
+        if User.query.filter_by(email=email).first():
+            flash("Email already registered", "error")
+            return redirect(url_for("auth.register"))
         password = request.form["password"]
         confirm_password = request.form["confirm_password"]
 
         if password != confirm_password:
             flash("Passwords do not match", "error")
             return redirect(url_for("auth.register"))
-        if email in USERS:
-            flash("Email already registered", "error")
-            return redirect(url_for("auth.register"))
-        USERS[email] = {"password": password}  # In a real app, hash the password here
-        #hashed_password = generate_password_hash(password)
-        #db = get_db()
-        #db.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, hashed_password))
-        #db.commit()
+        
+        user = User(username=username, email=email)
+        user.set_password(password)
+        db.session.add(user)
 
         flash("Account created successfully! Please log in.", "success")
         return redirect(url_for("auth.login"))

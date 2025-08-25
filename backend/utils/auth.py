@@ -4,7 +4,7 @@ def login_required(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "user_email" not in session:
+        if "username" not in session:
             return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated
