@@ -62,12 +62,12 @@
             };
             li.innerHTML = `
               ${plan.name}
-              <button class="btn btn-sm btn-danger" onclick="deletePlan(${plan.id})">Delete</button>
+              <button class="btn btn-sm btn-danger" onclick="deletePlan(${plan.hash_id})">Delete</button>
             `;
             const deleteBtn = li.querySelector("button");
             deleteBtn.onclick = (e) => {
               e.stopPropagation(); // prevent <li> redirect when delete is clicked
-              deletePlan(plan.id);
+              deletePlan(plan.hash_id);
             };
             list.appendChild(li);
           });

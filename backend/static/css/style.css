@@ -1,7 +1,39 @@
 body {
   font-family: Arial, sans-serif;
-  padding: 2rem;
 }
+
+main {
+  padding: 20px;
+}
+
 h1 {
   color: #2c3e50;
+}
+
+.title {
+  font-weight: bold;
+  text-align: center;
+  margin: 0.5rem 0;
+  background-color: aquamarine;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+.flex-container {
+  display: flex;
+  flex-direction: row;
+  padding: 10px;
+}
+div#expense-list {
+  flex: 1;
+  margin-right: 20px;
+}
+div#reimbursment {
+  flex: 1;
+}
+
+@media screen and (max-width:900px) {
+  .flex-container {
+    flex-direction: column !important;
+  }
 }

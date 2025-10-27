@@ -4,11 +4,6 @@ auth_bp = Blueprint("auth", __name__, template_folder="templates")
 
 from flask import render_template, request, redirect, url_for, session, flash
 
-# Fake user DB for now
-USERS = {
-    "admin@example.com": {"password": "admin123"}  # Password should be hashed later
-}
-
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -17,7 +12,12 @@ def login():
             flash("Username is required", "error")
             return redirect(url_for("auth.login"))  
         password = request.form.get("password")
-        if User.query.filter_by(username=username).first().check_password(password):
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            flash("Invalid username or password", "danger")
+            return redirect(url_for("auth.login"))
+        
+        if user.check_password(password):
             session["username"] = username
             flash("Logged in successfully!", "success")
             return redirect(url_for("plans.get_plans"))
@@ -54,7 +54,7 @@ def register():
         user = User(username=username, email=email)
         user.set_password(password)
         db.session.add(user)
-
+        db.session.commit()
         flash("Account created successfully! Please log in.", "success")
         return redirect(url_for("auth.login"))
 

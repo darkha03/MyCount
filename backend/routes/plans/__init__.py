@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request, render_template, session
 from utils.auth import login_required
+from models import db, User, Plan, PlanParticipant, Expense
 import secrets
 
 def generate_hash_id(length=8):
@@ -28,24 +29,74 @@ expenses = [
 @login_required
 def get_plans():
     return render_template("plans/dashboard.html")
+
 @plans_bp.route("/api/plans", methods=["GET"])
 @login_required
 def get_plans_api():
-    return jsonify(plans)
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "Not logged in"}), 401
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    user_plans = []
+    for participation in user.participations:
+        plan = Plan.query.get(participation.plan_id)
+        if plan:
+            user_plans.append({
+                "id": plan.id,
+                "name": plan.name,
+                "hash_id": plan.hash_id,
+                "created_at": plan.created_at.isoformat()
+            })
+    return jsonify(user_plans)
+
 @plans_bp.route("/api/plans", methods=["POST"])
 @login_required
 def add_plan():
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "Not logged in"}), 401
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
     data = request.get_json()
-    new_id = max(p["id"] for p in plans) + 1 if plans else 1
-    new_plan = {"id": new_id, "name": data["name"], "hash_id": generate_hash_id()}
-    plans.append(new_plan)
-    return jsonify(new_plan), 201
-@plans_bp.route("/api/plans/<int:plan_id>", methods=["DELETE"])
+    hash_id = generate_hash_id()
+
+    # Create new plan
+    plan = Plan(name=data["name"], hash_id=hash_id, created_by=user.id)
+    db.session.add(plan)
+    db.session.flush()  # assign plan.id without committing
+
+    # Add creator as participant
+    participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="owner")
+    db.session.add(participant)
+
+    # Commit everything at once
+    db.session.commit()
+
+    return jsonify({"name": plan.name, "hash_id": plan.hash_id}), 201
+
+@plans_bp.route("/api/plans/<plan_id>", methods=["DELETE"])
 @login_required
 def delete_plan(plan_id):
-    global plans
-    plans = [p for p in plans if p["id"] != plan_id]
-    return jsonify({"message": f"Plan {plan_id} deleted."}), 200
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "Not logged in"}), 401
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    plan = Plan.query.filter_by(hash_id=plan_id).first()
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+    participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
+    if not participant:
+        return jsonify({"error: You are not a participant of this plan"}), 403
+    db.session.delete(participant)  # Remove user from participants
+    db.session.commit()
+    return jsonify({"message": f"You left plan {plan.name}."}), 200
 
 # Route to view a specific plan
 @plans_bp.route("/<hash_id>", methods=["GET"])

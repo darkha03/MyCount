@@ -1,8 +1,9 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, session
 from flask_cors import CORS
 from routes.plans import plans_bp
 from routes.auth import auth_bp
 from models import db, User, Plan, PlanParticipant, Expense
+from utils.auth import login_required
 
 def create_app():
     app = Flask(__name__)
@@ -35,13 +36,35 @@ expenses = [
     }
 ]
 
+reimbursements = [
+    {
+        "from": "Charlie",
+        "to": "Alice",
+        "amount": 40.0
+    },
+    {
+        "from": "Charlie",
+        "to": "Bob",
+        "amount": 20.0
+    }
+]
+
+
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html")
 
+
 @app.route("/api/expenses")
+@login_required
 def get_expenses():
     return jsonify(expenses)
+
+@app.route("/api/reimbursements")
+@login_required
+def get_reimbursements():
+    return jsonify(reimbursements)
 
 if __name__ == "__main__":
     app.run(debug=True)
