@@ -49,9 +49,10 @@ class PlanParticipant(db.Model):
     __tablename__ = "plan_participants"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     plan_id = db.Column(db.Integer, db.ForeignKey("plans.id"), nullable=False)
     role = db.Column(db.String(20), default="member")  # e.g. "owner", "member"
+    name = db.Column(db.String(100), nullable=False) 
     
     # Relationships
     user = db.relationship("User", back_populates="participations")
@@ -68,7 +69,8 @@ class Expense(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Who paid?
-    payer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    payer_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    payer_name = db.Column(db.String(100), nullable=False)  # Store payer name for reference
     payer = db.relationship("User")
 
     # Which plan does this belong to?
@@ -85,7 +87,8 @@ class ExpenseShare(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     expense_id = db.Column(db.Integer, db.ForeignKey("expenses.id"), nullable=False)
-    participant_id = db.Column(db.Integer, db.ForeignKey("plan_participants.id"), nullable=False)
+    participant_id = db.Column(db.Integer, db.ForeignKey("plan_participants.id", ondelete="SET NULL"), nullable=True)
+    name = db.Column(db.String(100), nullable=False)  # Name of the participant for this share
     amount = db.Column(db.Float, nullable=False)
 
     # Relationships

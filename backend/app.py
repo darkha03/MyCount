@@ -1,18 +1,32 @@
 from flask import Flask, jsonify, render_template, session
 from flask_cors import CORS
-from routes.plans import plans_bp
-from routes.auth import auth_bp
-from models import db, User, Plan, PlanParticipant, Expense
-from utils.auth import login_required
+from backend.routes.plans import plans_bp
+from backend.routes.auth import auth_bp
+from backend.models import db, User, Plan, PlanParticipant, Expense
+from backend.utils.auth import login_required
+from flask_migrate import Migrate
+from sqlalchemy.engine.url import make_url
+from pathlib import Path
+
+# Initialize Flask-Migrate (database migrations)
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object('config.Config')
+    app.config.from_object('backend.config.Config')
     db.init_app(app)
+    # Wire migrations to the app and SQLAlchemy
+    with app.app_context():
+        # Ensure the SQLite directory exists if using sqlite
+        db_url = make_url(app.config.get('SQLALCHEMY_DATABASE_URI', ''))
+        if db_url.drivername == 'sqlite' and db_url.database:
+            Path(db_url.database).parent.mkdir(parents=True, exist_ok=True)
+        print(f"DB URL: {db.engine.url}")
+    migrate.init_app(app, db)
     app.secret_key = "your-very-secret-key"
     CORS(app)
-    with app.app_context():
-        db.create_all()
+    # Note: Rely on Flask-Migrate for schema changes (flask db init/migrate/upgrade)
+    # Avoid db.create_all() in production as it won't apply schema changes to existing tables.
     app.register_blueprint(plans_bp)    
     app.register_blueprint(auth_bp)
     return app

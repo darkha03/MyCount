@@ -188,8 +188,6 @@ function initExpensesForm(planId, options = {}) {
   });
 }
 
-
-
 function loadExpenses(planId) {
   fetch(`/plans/${planId}/section/expenses`)
     .then(res => res.text())
@@ -201,7 +199,6 @@ function loadExpenses(planId) {
     });
 }
 
-// When you want to initialize expenses section:
 function initExpensesSection(planId) {
   loadExpenses(planId);
 }

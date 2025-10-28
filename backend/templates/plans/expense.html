@@ -16,7 +16,7 @@
         <strong>Payer:</strong> {{ expense.payer }} <br>
         <strong>Participants:</strong>
         <ul>
-          {% for participant, amount in expense.amount_details.items() %}
+          {% for participant, amount in zip(expense.participants, expense.amounts) %}
             <li>{{ participant }} : {{ amount }}</li>
           {% endfor %}
         </ul>
@@ -53,7 +53,7 @@
           <div class="mb-3">
             <label for="expense-payer" class="form-label">Payer</label>
             <select class="form-control" id="expense-payer" required>
-              {% for participant in plan.participants %}
+              {% for participant in expense.participants %}
               <option value="{{ participant }}">{{ participant }}</option>
               {% endfor %}
             </select>
@@ -65,12 +65,12 @@
           <div class="mb-2">
             <label class="form-label">Participants</label>
             <div id="participants-list">
-              {% for participant in plan.participants %}
+              {% for participant, amount in zip(expense.participants, expense.amounts) %}
               
               <div class="d-flex justify-content-between align-items-center mb-3">
                   <input type="checkbox" class="form-check-input" checked>
                   <input type="text" class="form-control mb-2 participant-input" value="{{ participant }}" placeholder="Participant">
-                  <input type="float" class="form-control mb-2 participant-amount" placeholder="Amount" value={{expense.amount_details.get(participant, 0.0)}} step="0.01" min="0">
+                  <input type="float" class="form-control mb-2 participant-amount" placeholder="Amount" value={{ amount }} step="0.01" min="0">
               </div>
               {% endfor %}
             </div>

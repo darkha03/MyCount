@@ -1,6 +1,6 @@
 // frontend/js/app.js
 
-const BASE_URL = "http://127.0.0.1:5000";
+const BASE_URL = "";
 
 function displayExpenses() {
   const container = document.getElementById("expense-list");
@@ -40,6 +40,24 @@ function displayReimbursment() {
     })
     .catch(err => console.error("Failed to load reimbursment", err));
 }
+
+function displayPlanOverview() {
+  const container = document.getElementById("plan-overview");
+  container.innerHTML = `<h3>Plan Overview</h3>`;
+  fetch(`${BASE_URL}/plans/api/plans`)
+    .then(response => response.json())
+    .then(data => {
+      const div = document.createElement("div");
+      div.className = "plan-overview-item";
+      div.innerHTML = `
+        <p>Total Expenses: $${data.total_expenses}</p>
+        <p>Number of Participants: ${data.participant_count}</p>
+        <hr>
+      `;
+      container.appendChild(div);
+    })
+    .catch(err => console.error("Failed to load plan overview", err));
+  }
 
 displayExpenses();
 displayReimbursment();

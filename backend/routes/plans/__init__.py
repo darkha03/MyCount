@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template, session
-from utils.auth import login_required
-from models import db, User, Plan, PlanParticipant, Expense
+from backend.utils.auth import login_required
+from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
 import secrets
 
 def generate_hash_id(length=8):
@@ -30,12 +30,11 @@ expenses = [
 def get_plans():
     return render_template("plans/dashboard.html")
 
+#Get all the plans for the logged in user
 @plans_bp.route("/api/plans", methods=["GET"])
 @login_required
 def get_plans_api():
     username = session.get("username")
-    if not username:
-        return jsonify({"error": "Not logged in"}), 401
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -51,29 +50,30 @@ def get_plans_api():
             })
     return jsonify(user_plans)
 
+#Add a new plan
 @plans_bp.route("/api/plans", methods=["POST"])
 @login_required
 def add_plan():
     username = session.get("username")
-    if not username:
-        return jsonify({"error": "Not logged in"}), 401
-
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     data = request.get_json()
     hash_id = generate_hash_id()
-
+    participants = data.get("participants", []) # List of participant usernames
     # Create new plan
     plan = Plan(name=data["name"], hash_id=hash_id, created_by=user.id)
     db.session.add(plan)
     db.session.flush()  # assign plan.id without committing
 
     # Add creator as participant
-    participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="owner")
+    participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="owner", name=participants[0] if participants else username)
     db.session.add(participant)
-
+    # Add other participants
+    for participant_name in participants[1:]:
+        participant = PlanParticipant(user_id=None, plan_id=plan.id, role="member", name=participant_name)
+        db.session.add(participant)
     # Commit everything at once
     db.session.commit()
 
@@ -83,8 +83,6 @@ def add_plan():
 @login_required
 def delete_plan(plan_id):
     username = session.get("username")
-    if not username:
-        return jsonify({"error": "Not logged in"}), 401
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -102,91 +100,160 @@ def delete_plan(plan_id):
 @plans_bp.route("/<hash_id>", methods=["GET"])
 @login_required
 def view_plan(hash_id):
-    for plan in plans:
-        if plan["hash_id"] == hash_id:
-            return render_template("plans/view_plan.html", plan=plan, expenses=expenses)
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            return render_template("plans/view_plan.html", plan=plan.plan)
     return jsonify({"error": "Plan not found"}), 404
 
 @plans_bp.route("/api/plans/<hash_id>/expenses", methods=["GET"])
 @login_required
 def get_plan_expenses_api(hash_id):
-    # This is a placeholder for actual expense retrieval logic
-    for plan in plans:
-        if plan["hash_id"] == hash_id:
-            # In a real application, you would filter expenses by the plan
-            # Here we return all expenses for simplicity
-            return jsonify(expenses)
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            plan_expenses = Expense.query.filter_by(plan_id=plan.plan.id).all()
+            expenses_list = []
+            for expense in plan_expenses:
+                expenses_list.append({
+                    "id": expense.id,
+                    "name": expense.name,
+                    "amount": expense.amount,
+                    "payer": expense.payer,
+                    "participants": expense.participants,
+                    "amount_details": expense.amount_details
+                })
+            return jsonify(expenses_list)
     return jsonify({"error": "Plan not found"}), 404
 
+# Render expenses page
 @plans_bp.route("/<hash_id>/section/expenses", methods=["GET"])
 @login_required
 def get_plan_expenses(hash_id):
-    # This is a placeholder for actual expense retrieval logic
-    for plan in plans:
-        if plan["hash_id"] == hash_id:
-            # In a real application, you would filter expenses by the plan
-            # Here we return all expenses for simplicity
-            return render_template("plans/expenses.html", expenses=expenses, plan=plan)
+    user = User.query.filter_by(username=session.get("username")).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            plan_expenses = Expense.query.filter_by(plan_id=plan.plan.id).all()
+            expenses_list = []
+            for expense in plan_expenses:
+                expenses_list.append({
+                    "id": expense.id,
+                    "name": expense.description,
+                    "amount": expense.amount,
+                    "payer": expense.payer_name,
+                })
+            participant = PlanParticipant.query.filter_by(plan_id=plan.plan.id).all()
+            participant_names = [p.name for p in participant]
+            return render_template("plans/expenses.html", expenses=expenses_list, plan=plan.plan, participants=participant_names)
+    return jsonify({"error": "Plan not found"}), 404
 
+# Add expense to a plan
 @plans_bp.route("/<hash_id>/section/expenses", methods=["POST"])
 @login_required
 def add_plan_expense(hash_id):
-    data = request.get_json()
-    global expenses
-    new_expense = {
-        "id": len(expenses) + 1,  # Simple ID generation for demo purposes
-        "name": data["name"],
-        "amount": data["amount"],
-        "payer": data["payer"],
-        "participants": data["participants"],
-        "amount_details" : {
-            participant: float(amount)
-            for participant, amount in zip(data["participants"], data["amounts"])
-        }
-    }
-    # Here you would typically save the expense to a database
-    expenses.append(new_expense)
-    return jsonify(new_expense), 201
+    user = User.query.filter_by(username=session.get("username")).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            data = request.get_json()
+            print(f"Received expense data: {data}")
+            new_expense = Expense(
+                description=data["name"],
+                amount=data["amount"],
+                payer_name=data["payer"],
+                plan_id=plan.plan.id,
+            )
+            db.session.add(new_expense)
+            db.session.flush()  # assign new_expense.id without committing
+            for participant, amount in zip(data["participants"], data["amounts"]):
+                expense_participant = ExpenseShare(
+                    expense_id=new_expense.id,
+                    name=participant,
+                    amount=amount
+                )
+                db.session.add(expense_participant)
+            db.session.commit()
+            print(f"New expense added to plan {hash_id}: {new_expense}")
+    return jsonify({"message": "Expense added"}), 201
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["DELETE"])
 @login_required
 def delete_plan_expense(hash_id, expense_id):
-    global expenses
-    expenses = [e for e in expenses if e["id"] != expense_id]
-    return jsonify({"message": f"Expense {expense_id} deleted."}), 200
+    user = User.query.filter_by(username=session.get("username")).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            expense = Expense.query.filter_by(id=expense_id, plan_id=plan.plan.id).first()
+            if not expense:
+                return jsonify({"error": "Expense not found"}), 404
+            db.session.delete(expense)
+            db.session.commit()
+            print(f"Expense {expense_id} deleted from plan {hash_id}")
+            return jsonify({"message": "Expense deleted"}), 200
+    return jsonify({"error": "Plan not found"}), 404
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["PUT"])
 @login_required
 def update_plan_expense(hash_id, expense_id):
     data = request.get_json()
-    update_expense = {
-        "name": data["name"],
-        "amount": data["amount"],
-        "payer": data["payer"],
-        "participants": data["participants"],
-        "amount_details" : {
-            participant: float(amount)
-            for participant, amount in zip(data["participants"], data["amounts"])
-        }
-    }
-    for expense in expenses:
-        if expense["id"] == expense_id:
-            expense["name"] = update_expense["name"]
-            expense["amount"] = update_expense["amount"]
-            expense["payer"] = update_expense["payer"]
-            expense["participants"] = update_expense["participants"]
-            expense["amount_details"] = update_expense["amount_details"]
-            print(f"Expense {expense_id} updated: {expense}")
-            return jsonify(expense), 200
+    user = User.query.filter_by(username=session.get("username")).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            expense = Expense.query.filter_by(id=expense_id, plan_id=plan.plan.id).first()
+            if not expense:
+                return jsonify({"error": "Expense not found"}), 404
+            # Update expense details
+            expense.description = data.get("name", expense.description)
+            expense.amount = data.get("amount", expense.amount)
+            expense.payer_name = data.get("payer", expense.payer)
+            # Update shares
+            ExpenseShare.query.filter_by(expense_id=expense.id).delete()
+            for participant, amount in zip(data["participants"], data["amounts"]):
+                expense_participant = ExpenseShare(
+                    expense_id=expense.id,
+                    name=participant,
+                    amount=amount
+                )
+                db.session.add(expense_participant)
+            db.session.commit()
+            print(f"Expense {expense_id} updated in plan {hash_id}")
+            return jsonify({"message": "Expense updated"}), 200
     return jsonify({"error": "Expense not found"}), 404
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["GET"])
 @login_required
 def get_plan_expense(hash_id, expense_id):
-    plan = next((p for p in plans if p["hash_id"] == hash_id), None)
-    for expense in expenses:
-        if expense["id"] == expense_id:
-            return render_template("/plans/expense.html", expense=expense, plan=plan)
+    user = User.query.filter_by(username=session.get("username")).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    for plan in user.participations:
+        if plan.plan.hash_id == hash_id:
+            expense = Expense.query.filter_by(id=expense_id, plan_id=plan.plan.id).first()
+            if expense:
+                participant = ExpenseShare.query.filter_by(expense_id=expense.id).all()
+                participant_names = [p.name for p in participant]
+                participant_amounts = [p.amount for p in participant]
+                expense_data = {
+                    "id": expense.id,
+                    "name": expense.description,
+                    "amount": expense.amount,
+                    "payer": expense.payer_name,
+                    "participants": participant_names,
+                    "amounts": participant_amounts
+                }
+            return render_template("/plans/expense.html", expense=expense_data, plan=plan.plan, zip=zip)
     return jsonify({"error": "Expense not found"}), 404
 
 # Routes for reimbursements
