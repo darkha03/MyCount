@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, render_template, session
 from flask_cors import CORS
-from backend.routes.plans import plans_bp
+from backend.routes.plans import plans_bp, calculate_balance, calculate_reimbursements, get_plan_expenses_api
 from backend.routes.auth import auth_bp
 from backend.models import db, User, Plan, PlanParticipant, Expense
 from backend.utils.auth import login_required
@@ -33,22 +33,6 @@ def create_app():
 
 app = create_app()
 
-expenses = [
-    {
-        "id": 1,
-        "description": "Lunch",
-        "amount": 120.0,
-        "payer": "Alice",
-        "participants": ["Alice", "Bob", "Charlie"]
-    },
-    {
-        "id": 2,
-        "description": "Taxi",
-        "amount": 60.0,
-        "payer": "Bob",
-        "participants": ["Bob", "Charlie"]
-    }
-]
 
 reimbursements = [
     {
@@ -67,13 +51,40 @@ reimbursements = [
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html")
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    user_plans = []
+    user_reimbursements = []
+    for participation in user.participations:
+        plan = Plan.query.get(participation.plan_id)
+        if plan:
+            participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+            expenses = Expense.query.filter_by(plan_id=plan.id).all()
+            user_plans.append({
+                "id": plan.id,
+                "name": plan.name,
+                "hash_id": plan.hash_id,
+                "created_at": plan.created_at.isoformat(),
+                "participants": [p.name for p in participant],
+                "total_expenses": sum(e.amount for e in expenses)
+            })
+        expenses = get_plan_expenses_api(participation.plan.hash_id).get_json()
+        print("Expenses for plan", participation.plan.hash_id, ":", expenses)
+        balances = calculate_balance(expenses)
+        reimbursements = calculate_reimbursements(balances)
+        for r in reimbursements:
+            r["plan_hash_id"] = participation.plan.hash_id
+            if r["from"] == participation.name:
+                r["from"] = "You (" + r["from"] + ")"
+                user_reimbursements.append(r)
+            elif r["to"] == participation.name:
+                r["to"] = "You (" + r["to"] + ")"
+                user_reimbursements.append(r)
+       
+    return render_template("index.html", plans=user_plans, reimbursments=user_reimbursements)
 
-
-@app.route("/api/expenses")
-@login_required
-def get_expenses():
-    return jsonify(expenses)
 
 @app.route("/api/reimbursements")
 @login_required

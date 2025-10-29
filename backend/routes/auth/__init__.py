@@ -20,7 +20,7 @@ def login():
         if user.check_password(password):
             session["username"] = username
             flash("Logged in successfully!", "success")
-            return redirect(url_for("plans.get_plans"))
+            return redirect(url_for("index"))
         else:
             flash("Invalid username or password", "danger")
             return redirect(url_for("auth.login"))

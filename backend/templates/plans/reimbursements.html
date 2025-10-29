@@ -2,14 +2,20 @@
 
 
 {% if reimbursements %}
-<ul class="list-group">
+<ul class="list-group gap-2">
     {% for reimbursement in reimbursements %}
     <div class="reimbursement-item">
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <h6>From {{ reimbursement.from }}</h6>
-            <p>to: {{ reimbursement.to }}</p>
-            <p>Amount: {{ reimbursement.amount }}</p>
-            <button class="btn btn-sm btn-outline-primary paid-btn">Is paid</button>
+        <li class="list-group-item py-2">
+            <div class="d-flex justify-content-between align-items-center w-100">
+            <span class="fw-bold">From {{ reimbursement.from }}</span>
+            <span>to: {{ reimbursement.to }}</span>
+            <span>Amount: {{ reimbursement.amount }}</span>
+            <button class="btn btn-sm btn-outline-primary paid-btn"
+                data-from="{{ reimbursement.from }}"
+                data-to="{{ reimbursement.to }}"
+                data-amount="{{ reimbursement.amount }}"
+            >Is paid</button>
+            </div>
         </li>
     </div>
     {% endfor %}

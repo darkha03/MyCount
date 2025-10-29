@@ -211,7 +211,6 @@ function loadReimbursements(planId) {
     .then(html => {
       const planContent = document.getElementById("plan-content");
       planContent.innerHTML = html;
-      // Do NOT call initReimbursementSection(planId) here!
     });
 }
 
@@ -222,13 +221,9 @@ function initReimbursementSection(planId) {
 
   planContent.addEventListener("click", function(e) {
     if (e.target.classList.contains("paid-btn")) {
-      const reimbursementItem = e.target.closest(".reimbursement-item");
-      const from = reimbursementItem.querySelector("h6").textContent.replace("From ", "").trim();
-      const to = reimbursementItem.querySelector("p").textContent.replace("to: ", "").trim();
-      const amountText = Array.from(reimbursementItem.querySelectorAll("p"))
-        .find(p => p.textContent.startsWith("Amount:"));
-      const amount = amountText ? parseFloat(amountText.textContent.replace("Amount:", "").trim()) : 0;
-
+      const from = e.target.getAttribute("data-from");
+      const to = e.target.getAttribute("data-to");
+      const amount = e.target.getAttribute("data-amount");
       fetch(`/plans/${planId}/section/expenses`, {
         method: "POST",
         headers: {

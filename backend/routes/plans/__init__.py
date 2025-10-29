@@ -11,18 +11,8 @@ plans_bp = Blueprint(
     __name__,
     template_folder="templates",
     static_folder="static",
-    url_prefix="/plans"  # Optional prefix
+    url_prefix="/plans"  
 )
-
-# Temporary mock plans
-plans = [
-    {"id": 1, "name": "Trip to Hanoi", "hash_id": generate_hash_id(), "participants": ["Alice", "Bob", "Charlie"]},
-    {"id": 2, "name": "Birthday Party", "hash_id": generate_hash_id(), "participants": ["Alice", "Bob", "Charlie", "David"]},
-]
-expenses = [
-        {"id": 1, "name": "Lunch", "amount": 120.0, "payer": "Alice", "participants": ["Alice", "Bob", "Charlie"], "amount_details": {"Alice": 40.0, "Bob": 40.0, "Charlie": 40.0}},
-        {"id": 2, "name": "Taxi", "amount": 60.0, "payer": "Bob", "participants": ["Bob", "Charlie"], "amount_details": {"Bob": 30.0, "Charlie": 30.0}},
-]
 
 # Routes for plans management
 @plans_bp.route("/", methods=["GET"])
@@ -42,11 +32,15 @@ def get_plans_api():
     for participation in user.participations:
         plan = Plan.query.get(participation.plan_id)
         if plan:
+            participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+            expenses = Expense.query.filter_by(plan_id=plan.id).all()
             user_plans.append({
                 "id": plan.id,
                 "name": plan.name,
                 "hash_id": plan.hash_id,
-                "created_at": plan.created_at.isoformat()
+                "created_at": plan.created_at.isoformat(),
+                "participants": [p.name for p in participant],
+                "total_expenses": sum(e.amount for e in expenses)
             })
     return jsonify(user_plans)
 
@@ -121,13 +115,14 @@ def get_plan_expenses_api(hash_id):
             plan_expenses = Expense.query.filter_by(plan_id=plan.plan.id).all()
             expenses_list = []
             for expense in plan_expenses:
+                participant = ExpenseShare.query.filter_by(expense_id=expense.id).all()
                 expenses_list.append({
                     "id": expense.id,
-                    "name": expense.name,
+                    "name": expense.description,
                     "amount": expense.amount,
-                    "payer": expense.payer,
-                    "participants": expense.participants,
-                    "amount_details": expense.amount_details
+                    "payer": expense.payer_name,
+                    "participants": [p.name for p in participant],
+                    "amount_details": {p.name: p.amount for p in participant}
                 })
             return jsonify(expenses_list)
     return jsonify({"error": "Plan not found"}), 404
@@ -183,6 +178,7 @@ def add_plan_expense(hash_id):
                 db.session.add(expense_participant)
             db.session.commit()
             print(f"New expense added to plan {hash_id}: {new_expense}")
+            
     return jsonify({"message": "Expense added"}), 201
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["DELETE"])
@@ -296,8 +292,7 @@ def calculate_reimbursements(balances):
 @plans_bp.route("/<hash_id>/section/reimbursements", methods=["GET"])
 @login_required
 def get_plan_reimbursements(hash_id):
-    # Placeholder for actual reimbursement retrieval logic
-    global expenses
+    expenses = get_plan_expenses_api(hash_id).get_json()
     balances = calculate_balance(expenses)
     reimbursements = calculate_reimbursements(balances)
     return render_template("plans/reimbursements.html", hash_id=hash_id, reimbursements=reimbursements)
@@ -354,7 +349,7 @@ def calculate_real_expense(expenses):
 @login_required
 def get_plan_statistics(hash_id):
     # Placeholder for actual statistics retrieval logic
-    global expenses
+    expenses = get_plan_expenses_api(hash_id).get_json()
     balances = calculate_balance(expenses)
     total_expense = calculate_expense(expenses)
     real_expense = calculate_real_expense(expenses)
