@@ -9,6 +9,7 @@
       <div class="col-12 col-lg-8" id="plan-overview">
         <h3>Your Plans</h3>
         <div class="row row-cols-1 row-cols-md-2 g-4 mt-2">
+          {% if plans %}
           {% for plan in plans %}
             <div class="col">
               <div class="card mb-3">
@@ -24,6 +25,11 @@
               </div>
             </div>
           {% endfor %}
+          {% else %}
+            <p>You are not part of any plans yet. </p>
+            <p></p>
+            <a href="/plans/" class="btn btn-primary">Create a new plan or join an existing one</a>
+          {% endif %}
         </div>
       </div>
       <div class="col-12 col-lg-4" id="reimbursment">

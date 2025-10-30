@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, render_template, session
 from backend.utils.auth import login_required
 from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
 import secrets
+from datetime import datetime
 
 def generate_hash_id(length=8):
     return secrets.token_urlsafe(length)[:length]
@@ -73,6 +74,7 @@ def add_plan():
 
     return jsonify({"name": plan.name, "hash_id": plan.hash_id}), 201
 
+# Delete a plan (leave the plan)
 @plans_bp.route("/api/plans/<plan_id>", methods=["DELETE"])
 @login_required
 def delete_plan(plan_id):
@@ -86,10 +88,42 @@ def delete_plan(plan_id):
     participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
     if not participant:
         return jsonify({"error: You are not a participant of this plan"}), 403
-    db.session.delete(participant)  # Remove user from participants
+    # Remove user_id from participant or delete participant
+    participant.user_id = None
     db.session.commit()
     return jsonify({"message": f"You left plan {plan.name}."}), 200
 
+# Join an existing plan
+@plans_bp.route("/api/plans/<plan_id>/join", methods=["GET", "POST"])
+@login_required
+def join_plan(plan_id):
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    plan = Plan.query.filter_by(hash_id=plan_id).first()
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+    if request.method == "GET":
+        existing_participants = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+        if any(p.user_id == user.id for p in existing_participants):
+            return jsonify({"error": "You are already a participant of this plan."}), 400
+        participants_list = [{"name": p.name, "id": p.user_id} for p in existing_participants]
+        return jsonify(participants_list), 200
+    elif request.method == "POST":
+        existing_participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
+        if existing_participant:
+            return jsonify({"error": "You are already a participant of this plan."}), 400
+        # Add user as participant
+        name = request.json.get("participant_name", username)
+        update_participant = PlanParticipant.query.filter_by(plan_id=plan.id, name=name, user_id=None).first()
+        if update_participant:
+            update_participant.user_id = user.id
+        else:
+            new_participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="member", name=name)
+            db.session.add(new_participant)
+        db.session.commit()
+        return jsonify({"message": f"You have joined the plan '{plan.name}'."}), 200
 # Route to view a specific plan
 @plans_bp.route("/<hash_id>", methods=["GET"])
 @login_required
@@ -137,9 +171,12 @@ def get_plan_expenses(hash_id):
     for plan in user.participations:
         if plan.plan.hash_id == hash_id:
             plan_expenses = Expense.query.filter_by(plan_id=plan.plan.id).all()
-            expenses_list = []
+            expenses_by_date = {}
             for expense in plan_expenses:
-                expenses_list.append({
+                date_str = expense.date.strftime('%d/%m/%Y')
+                if date_str not in expenses_by_date:
+                    expenses_by_date[date_str] = []
+                expenses_by_date[date_str].append({
                     "id": expense.id,
                     "name": expense.description,
                     "amount": expense.amount,
@@ -147,7 +184,9 @@ def get_plan_expenses(hash_id):
                 })
             participant = PlanParticipant.query.filter_by(plan_id=plan.plan.id).all()
             participant_names = [p.name for p in participant]
-            return render_template("plans/expenses.html", expenses=expenses_list, plan=plan.plan, participants=participant_names)
+            sorted_dates = sorted(expenses_by_date.keys(), reverse=True)
+            return render_template("plans/expenses.html", expenses_by_date=expenses_by_date,
+                sorted_dates=sorted_dates, plan=plan.plan, participants=participant_names)
     return jsonify({"error": "Plan not found"}), 404
 
 # Add expense to a plan
@@ -161,10 +200,19 @@ def add_plan_expense(hash_id):
         if plan.plan.hash_id == hash_id:
             data = request.get_json()
             print(f"Received expense data: {data}")
+            date_str = data["date"]
+            try:
+                # If date is in 'YYYY-MM-DD' format
+                date_obj = datetime.fromisoformat(date_str)
+            except Exception:
+                # fallback for other formats, e.g. 'YYYY-MM-DDTHH:MM'
+                date_obj = datetime.strptime(date_str[:10], "%Y-%m-%d")
+
             new_expense = Expense(
                 description=data["name"],
                 amount=data["amount"],
                 payer_name=data["payer"],
+                date=date_obj,
                 plan_id=plan.plan.id,
             )
             db.session.add(new_expense)
@@ -245,6 +293,7 @@ def get_plan_expense(hash_id, expense_id):
                     "id": expense.id,
                     "name": expense.description,
                     "amount": expense.amount,
+                    "date": expense.date.isoformat(),
                     "payer": expense.payer_name,
                     "participants": participant_names,
                     "amounts": participant_amounts

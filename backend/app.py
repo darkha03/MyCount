@@ -33,21 +33,6 @@ def create_app():
 
 app = create_app()
 
-
-reimbursements = [
-    {
-        "from": "Charlie",
-        "to": "Alice",
-        "amount": 40.0
-    },
-    {
-        "from": "Charlie",
-        "to": "Bob",
-        "amount": 20.0
-    }
-]
-
-
 @app.route("/")
 @login_required
 def index():
@@ -58,7 +43,7 @@ def index():
     user_plans = []
     user_reimbursements = []
     for participation in user.participations:
-        plan = Plan.query.get(participation.plan_id)
+        plan = Plan.query.filter_by(id=participation.plan_id).first()
         if plan:
             participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
             expenses = Expense.query.filter_by(plan_id=plan.id).all()
@@ -70,8 +55,10 @@ def index():
                 "participants": [p.name for p in participant],
                 "total_expenses": sum(e.amount for e in expenses)
             })
+        # Limit to 4 most recent plans
+        user_plans = sorted(user_plans, key=lambda p: p["created_at"], reverse=True)[:4]  
+        # Calculate reimbursements for this plan
         expenses = get_plan_expenses_api(participation.plan.hash_id).get_json()
-        print("Expenses for plan", participation.plan.hash_id, ":", expenses)
         balances = calculate_balance(expenses)
         reimbursements = calculate_reimbursements(balances)
         for r in reimbursements:
@@ -81,15 +68,8 @@ def index():
                 user_reimbursements.append(r)
             elif r["to"] == participation.name:
                 r["to"] = "You (" + r["to"] + ")"
-                user_reimbursements.append(r)
-       
+                user_reimbursements.append(r) 
     return render_template("index.html", plans=user_plans, reimbursments=user_reimbursements)
-
-
-@app.route("/api/reimbursements")
-@login_required
-def get_reimbursements():
-    return jsonify(reimbursements)
 
 if __name__ == "__main__":
     app.run(debug=True)

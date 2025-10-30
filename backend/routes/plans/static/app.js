@@ -158,6 +158,7 @@ function initExpensesForm(planId, options = {}) {
     const expenseName = input.value;
     const expenseAmount = expenseAmountInput.value;
     const payer = document.getElementById("expense-payer").value;
+    const date = document.getElementById("expense-date").value;
     const participants = Array.from(participantsList.querySelectorAll(".participant-input")).map(input => input.value);
     const amounts = Array.from(participantsList.querySelectorAll(".participant-amount")).map(input => input.value);
 
@@ -170,6 +171,7 @@ function initExpensesForm(planId, options = {}) {
         name: expenseName,
         amount: parseFloat(expenseAmount),
         payer: payer,
+        date: date,
         participants: participants,
         amounts: amounts
       })
@@ -233,6 +235,7 @@ function initReimbursementSection(planId) {
           name: "Reimbursement",
           amount: amount,
           payer: from,
+          date: new Date().toISOString().split('T')[0],
           participants: [to],
           amounts: [amount]
         })

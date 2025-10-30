@@ -12,7 +12,7 @@
       <h5 class="card-title">{{ expense.title }}</h5>
       <p class="card-text">
         <strong>Amount:</strong> {{ "%.2f"|format(expense.amount) }} € <br>
-        <strong>Date:</strong> {{ expense.date }} <br>
+        <strong>Date:</strong> {{ expense.date[8:10] }}/{{ expense.date[5:7] }}/{{ expense.date[0:4] }}<br>
         <strong>Payer:</strong> {{ expense.payer }} <br>
         <strong>Participants:</strong>
         <ul>

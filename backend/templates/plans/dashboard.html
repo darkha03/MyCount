@@ -2,11 +2,14 @@
 
 {% block title %}Plans{% endblock %}
 {% block content %}
-  <h2>Your Plans (from Blueprint Template)</h2>
+  <div class="d-flex justify-content-center align-items-center mb-3 p-2 rounded" style="background-color: aquamarine;">
+    <h1>Plans Dashboard</h1>
+  </div>
+  <div class="mb-4 justify-content-center d-flex gap-2">
   <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addPlanModal">Create New Plan</button>
-  <ul id="plan-list" class="list-group">
-    
-  </ul>
+  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#joinPlanModal">Join Existing Plan</button>
+  </div>
+  <div id="plan-list" class="row row-cols-1 row-cols-md-2 g-4"></div>
   <!-- Modal for adding new plan -->
   <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -40,39 +43,82 @@
     </div>
   </div>
 
+  <!-- Modal for joining existing plan -->
+  <div class="modal fade" id="joinPlanModal" tabindex="-1" aria-labelledby="joinPlanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="join-plan-form">
+          <div class="modal-header">
+            <h5 class="modal-title" id="joinPlanLabel">Join an Existing Plan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="plan-hash-id" class="form-label">Plan Hash ID</label>
+              <input type="text" class="form-control" id="plan-hash-id" name="plan_hash_id" required>
+            </div>
+            <div id="join-response" class="mb-2">
+              <button type="button" id="join-plan-btn" class="btn btn-secondary m-3">Search Plan</button>
+            </div>
+          </div>
+          <div id="join-footer" class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     const list = document.getElementById("plan-list");
-    const form = document.getElementById("add-plan-form");
+    const addform = document.getElementById("add-plan-form");
     const input = document.getElementById("plan-name");
     const participantsList = document.getElementById("participants-list");
     const addParticipantBtn = document.getElementById("add-participant-btn");
+    const joinBtn = document.getElementById("join-plan-btn");
+    const joinResponse = document.getElementById("join-response");
+    const joinFooter = document.getElementById("join-footer");
+    const joinForm = document.getElementById("join-plan-form");
 
-    function loadPlans() {
-      fetch("/plans/api/plans")
-        .then(res => res.json())
-        .then(data => {
-          list.innerHTML = "";
-          data.forEach(plan => {
-            const li = document.createElement("li");
-            li.className = "list-group-item d-flex justify-content-between align-items-center";
-            li.style.cursor = "pointer";
-            li.onclick = () => {
-              window.location.href = `/plans/${plan.hash_id}`;
-            };
-            li.innerHTML = `
-              ${plan.name}
-              <button class="btn btn-sm btn-danger" onclick="deletePlan(${plan.hash_id})">Delete</button>
-            `;
-            const deleteBtn = li.querySelector("button");
-            deleteBtn.onclick = (e) => {
-              e.stopPropagation(); // prevent <li> redirect when delete is clicked
-              deletePlan(plan.hash_id);
-            };
-            list.appendChild(li);
-          });
-        });
-    }
+  function loadPlans() {
+    fetch("/plans/api/plans")
+    .then(res => res.json())
+    .then(data => {
+      list.innerHTML = "";
+      data.forEach(plan => {
+        const col = document.createElement("div");
+        col.className = "col";
+        col.innerHTML = `
+          <div class="card mb-3 h-100" style="cursor:pointer;">
+            <div class="card-body">
+              <h4 class="card-title">${plan.name}</h4>
+              <p class="card-text">Created at: ${plan.created_at ? plan.created_at.slice(8,10) + '/' + plan.created_at.slice(5,7) + '/' + plan.created_at.slice(0,4) : ''}</p>
+              <p class="card-text">Participants: ${plan.participants ? plan.participants.join(', ') : ''}</p>
+              <p class="card-text">Total Expenses: $${plan.total_expenses ? plan.total_expenses.toFixed(2) : '0.00'}</p>
+              <div class="d-flex justify-content-end gap-2">
+                
+                <a href="/plans/${plan.hash_id}" class="btn btn-primary">View Plan</a>
+                <button class="btn btn-info btn-sm" disabled>Share</button>
+                <buttpn class="btn btn-secondary btn-sm" disabled>Modify</button>
+                <button class="btn btn-danger btn-sm delete-plan-btn" data-id="${plan.hash_id}">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+        // Card click navigates to plan
+        col.querySelector('.card').onclick = () => {
+          window.location.href = `/plans/${plan.hash_id}`;
+        };
+        // Prevent card click when delete is pressed
+        col.querySelector('.delete-plan-btn').onclick = (e) => {
+          e.stopPropagation();
+          deletePlan(plan.hash_id);
+        };
+        list.appendChild(col);
+      });
+    });
+  }
 
     window.deletePlan = function(id) {
       fetch(`/plans/api/plans/${id}`, { method: "DELETE" }).then(loadPlans);
@@ -87,7 +133,7 @@
       participantsList.appendChild(input);
     };
 
-    form.onsubmit = e => {
+    addform.onsubmit = e => {
       e.preventDefault();
       const planName = input.value;
       const participantInputs = document.querySelectorAll(".participant-input");
@@ -101,6 +147,58 @@
         input.value = "";
         participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1">';
         const modal = bootstrap.Modal.getInstance(document.getElementById('addPlanModal'));
+        modal.hide();
+        loadPlans();
+      });
+    };
+
+    joinBtn.onclick = e => {
+      e.preventDefault();
+      const planHashId = document.getElementById("plan-hash-id").value;
+      fetch(`/plans/api/plans/${planHashId}/join`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data =>{
+        joinResponse.innerHTML = "<label class='form-label'>Select Your Name</label>";
+        if (Array.isArray(data) && data.length > 0) {
+          const select = document.createElement("select");
+          select.className = "form-select mb-2";
+          select.name = "participant_name";
+          data.forEach(participant => {
+            if (participant.id === null) {
+              const option = document.createElement("option");
+              option.value = participant.name;
+              option.textContent = participant.name;
+              select.appendChild(option);
+            }
+          });
+          joinResponse.appendChild(select);
+          joinFooter.innerHTML = `<button type="submit" class="btn btn-primary">Join Plan</button>`;
+          const confirmJoinBtn = document.getElementById("confirm-join-btn");
+          if (confirmJoinBtn) {
+            confirmJoinBtn.onclick = function() {
+              joinForm.requestSubmit(); // triggers joinForm.onsubmit
+            };
+          }
+        } else {
+          joinResponse.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+          joinFooter.innerHTML = "";
+        }
+      });
+    };
+
+    joinForm.onsubmit = e => {
+      e.preventDefault();
+      const planHashId = document.getElementById("plan-hash-id").value;
+      const selectedName = joinForm.participant_name.value;      
+      fetch(`/plans/api/plans/${planHashId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participant_name: selectedName })
+      }).then(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('joinPlanModal'));
         modal.hide();
         loadPlans();
       });
