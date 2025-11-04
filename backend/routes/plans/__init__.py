@@ -41,7 +41,7 @@ def get_plans_api():
                 "hash_id": plan.hash_id,
                 "created_at": plan.created_at.isoformat(),
                 "participants": [p.name for p in participant],
-                "total_expenses": sum(e.amount for e in expenses)
+                "total_expenses": sum(e.amount for e in expenses if e.description != "Reimbursement")
             })
     return jsonify(user_plans)
 
@@ -73,6 +73,48 @@ def add_plan():
     db.session.commit()
 
     return jsonify({"name": plan.name, "hash_id": plan.hash_id}), 201
+
+# Get a specific plan
+@plans_bp.route("/api/plans/<plan_id>", methods=["GET"])
+@login_required
+def get_plan(plan_id):
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    plan = Plan.query.filter_by(hash_id=plan_id).first()
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+    participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
+    if not participant:
+        return jsonify({"error": "You are not a participant of this plan"}), 403
+    plan_data = {
+        "id": plan.id,
+        "name": plan.name,
+        "hash_id": plan.hash_id,
+        "created_at": plan.created_at.isoformat(),
+        "participants": [p.name for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()]
+    }
+    return jsonify(plan_data), 200
+
+# Modify a plan
+@plans_bp.route("/api/plans/<plan_id>", methods=["PUT"])
+@login_required
+def modify_plan(plan_id):
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    plan = Plan.query.filter_by(hash_id=plan_id).first()
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+    participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
+    if not participant or participant.role != "owner":
+        return jsonify({"error": "You are not the owner of this plan"}), 403
+    data = request.get_json()
+    plan.name = data.get("name", plan.name)
+    db.session.commit()
+    return jsonify({"message": f"Plan {plan.name} updated."}), 200
 
 # Delete a plan (leave the plan)
 @plans_bp.route("/api/plans/<plan_id>", methods=["DELETE"])
@@ -377,6 +419,8 @@ def calculate_expense(expenses):
         for participant in participants:
             if participant not in total_expense:
                 total_expense[participant] = 0
+            if expense["name"] == "Reimbursement":
+                continue  # Skip reimbursements in total expense calculation
             total_expense[participant] += amount_details[participant]
     for k in total_expense:
         total_expense[k] = round(total_expense[k], 2)
@@ -390,6 +434,14 @@ def calculate_real_expense(expenses):
         if payer not in real_expense:
             real_expense[payer] = 0
         real_expense[payer] += amount
+        for participant in expense["participants"]:
+            if participant not in real_expense:
+                real_expense[participant] = 0
+        if expense["name"] == "Reimbursement":
+            for participant in expense["participants"]:
+                if participant not in real_expense:
+                    real_expense[participant] = 0
+                real_expense[participant] -= expense['amount_details'][participant]
     for k in real_expense:
         real_expense[k] = round(real_expense[k], 2)
     return real_expense
@@ -402,4 +454,7 @@ def get_plan_statistics(hash_id):
     balances = calculate_balance(expenses)
     total_expense = calculate_expense(expenses)
     real_expense = calculate_real_expense(expenses)
+    balances = dict(sorted(balances.items()))
+    total_expense = dict(sorted(total_expense.items()))
+    real_expense = dict(sorted(real_expense.items()))
     return render_template("plans/statistics.html", hash_id=hash_id, balances=balances, total_expense=total_expense, real_expense=real_expense)

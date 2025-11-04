@@ -52,7 +52,6 @@
             <h5 class="modal-title" id="joinPlanLabel">Join an Existing Plan</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-
           <div class="modal-body">
             <div class="mb-3">
               <label for="plan-hash-id" class="form-label">Plan Hash ID</label>
@@ -63,11 +62,60 @@
             </div>
           </div>
           <div id="join-footer" class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Reset</button>
+              <button type="button" class="btn btn-secondary" id="reset-join-btn">Reset</button>
           </div>
         </form>
       </div>
     </div>
+  </div>
+
+  <!-- Modal for modifying plan -->
+  <div class="modal fade" id="modifyPlanModal" tabindex="-1" aria-labelledby="modifyPlanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="modify-plan-form">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modifyPlanLabel">Modify Plan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="modify-plan-name" class="form-label">Plan Name</label>
+              <input type="text" class="form-control" id="modify-plan-name" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Participants</label>
+              <div id="modify-participants-list"></div>
+              <button type="button" id="add-modify-participant-btn" class="btn btn-sm btn-outline-primary">+ Add Participant</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-warning">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal for sharing plan -->
+  <div class="modal fade" id="sharePlanModal" tabindex="-1" aria-labelledby="sharePlanLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="sharePlanLabel">Share Plan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="share-plan-hash-id" class="form-label">Plan Shared ID</label>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" id="share-plan-hash-id" readonly>
+            <button class="btn btn-outline-secondary" type="button" id="copy-plan-hash-btn">Copy</button>
+          </div>
+          <div id="copy-feedback" class="text-success" style="display:none;">Copied!</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -80,45 +128,166 @@
     const joinResponse = document.getElementById("join-response");
     const joinFooter = document.getElementById("join-footer");
     const joinForm = document.getElementById("join-plan-form");
+    const modifyForm = document.getElementById("modify-plan-form");
+    const modifyPlanNameInput = document.getElementById("modify-plan-name");
+    const modifyParticipantsList = document.getElementById("modify-participants-list");
+    const addModifyParticipantBtn = document.getElementById("add-modify-participant-btn");
+    const sharePlanModal = document.getElementById('sharePlanModal');
+    const sharePlanHashInput = document.getElementById('share-plan-hash-id');
+    const copyPlanHashBtn = document.getElementById('copy-plan-hash-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
+    let currentModifyPlanId = null;
+    const resetJoinBtn = document.getElementById("reset-join-btn");
+    if (resetJoinBtn) {
+      resetJoinBtn.onclick = function() {
+        joinForm.reset();
+        joinResponse.innerHTML = `<button type="button" id="join-plan-btn" class="btn btn-secondary m-3">Search Plan</button>`;
+        //joinFooter.innerHTML = `<button type="button" class="btn btn-secondary" id="reset-join-btn">Reset</button>`;
+        const confirmJoinBtn = document.getElementById("confirm-join-btn");
+        if (confirmJoinBtn) {
+          confirmJoinBtn.remove();
+        }
+        const joinBtn = document.getElementById("join-plan-btn");
+        if (joinBtn) {
+          joinBtn.onclick = joinBtnHandler;
+        }
+      };
+    }
 
-  function loadPlans() {
-    fetch("/plans/api/plans")
-    .then(res => res.json())
-    .then(data => {
-      list.innerHTML = "";
-      data.forEach(plan => {
-        const col = document.createElement("div");
-        col.className = "col";
-        col.innerHTML = `
-          <div class="card mb-3 h-100" style="cursor:pointer;">
-            <div class="card-body">
-              <h4 class="card-title">${plan.name}</h4>
-              <p class="card-text">Created at: ${plan.created_at ? plan.created_at.slice(8,10) + '/' + plan.created_at.slice(5,7) + '/' + plan.created_at.slice(0,4) : ''}</p>
-              <p class="card-text">Participants: ${plan.participants ? plan.participants.join(', ') : ''}</p>
-              <p class="card-text">Total Expenses: $${plan.total_expenses ? plan.total_expenses.toFixed(2) : '0.00'}</p>
-              <div class="d-flex justify-content-end gap-2">
-                
-                <a href="/plans/${plan.hash_id}" class="btn btn-primary">View Plan</a>
-                <button class="btn btn-info btn-sm" disabled>Share</button>
-                <buttpn class="btn btn-secondary btn-sm" disabled>Modify</button>
-                <button class="btn btn-danger btn-sm delete-plan-btn" data-id="${plan.hash_id}">Delete</button>
+    function loadPlans() {
+      fetch("/plans/api/plans")
+      .then(res => res.json())
+      .then(data => {
+        list.innerHTML = "";
+        data.forEach(plan => {
+          const col = document.createElement("div");
+          col.className = "col";
+          col.innerHTML = `
+            <div class="card mb-3 h-100" style="cursor:pointer;">
+              <div class="card-body">
+                <h4 class="card-title">${plan.name}</h4>
+                <p class="card-text">Created at: ${plan.created_at ? plan.created_at.slice(8,10) + '/' + plan.created_at.slice(5,7) + '/' + plan.created_at.slice(0,4) : ''}</p>
+                <p class="card-text">Participants: ${plan.participants ? plan.participants.join(', ') : ''}</p>
+                <p class="card-text">Total Expenses: $${plan.total_expenses ? plan.total_expenses.toFixed(2) : '0.00'}</p>
+                <div class="d-flex justify-content-end gap-2">
+                  <a href="/plans/${plan.hash_id}" class="btn btn-primary">View Plan</a>
+                  <button class="btn btn-sm btn-outline-primary modify-plan-btn" data-id="${plan.hash_id}">Modify</button>
+                  <button class="btn btn-sm btn-outline-primary share-plan-btn" data-id="${plan.hash_id}">Share</button>
+                  <button class="btn btn-danger btn-sm delete-plan-btn" data-id="${plan.hash_id}">Delete</button>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-        // Card click navigates to plan
-        col.querySelector('.card').onclick = () => {
-          window.location.href = `/plans/${plan.hash_id}`;
-        };
-        // Prevent card click when delete is pressed
-        col.querySelector('.delete-plan-btn').onclick = (e) => {
-          e.stopPropagation();
-          deletePlan(plan.hash_id);
-        };
-        list.appendChild(col);
+          `;
+          // Card click navigates to plan
+          col.querySelector('.card').onclick = () => {
+            window.location.href = `/plans/${plan.hash_id}`;
+          };
+          // Prevent card click when delete is pressed
+          col.querySelector('.delete-plan-btn').onclick = (e) => {
+            e.stopPropagation();
+            if (confirm("Are you sure you want to delete this plan?")) {
+              deletePlan(plan.hash_id);
+            }
+          };
+          list.appendChild(col);
+        });
+        attachModifyHandlers();
+        attachShareHandlers();
       });
-    });
-  }
+    }
+
+    function attachModifyHandlers() {
+      document.querySelectorAll('.modify-plan-btn').forEach(btn => {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          currentModifyPlanId = btn.getAttribute("data-id");
+          // Fetch plan details
+          fetch(`/plans/api/plans/${currentModifyPlanId}`)
+            .then(res => res.json())
+            .then(plan => {
+              modifyPlanNameInput.value = plan.name;
+              modifyParticipantsList.innerHTML = "";
+              plan.participants.forEach((name, idx) => {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "form-control mb-2 participant-input";
+                input.value = name;
+                input.placeholder = `Participant ${idx + 1}`;
+                modifyParticipantsList.appendChild(input);
+              });
+              const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modifyPlanModal'));
+              modal.show();
+            });
+        };
+      });
+    }
+    addModifyParticipantBtn.onclick = () => {
+      const count = modifyParticipantsList.querySelectorAll('.participant-input').length + 1;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "form-control mb-2 participant-input";
+      input.placeholder = `Participant ${count}`;
+      modifyParticipantsList.appendChild(input);
+    };
+
+    function attachShareHandlers() {
+      document.querySelectorAll('.share-plan-btn').forEach(btn => {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          const hashId = btn.getAttribute("data-id");
+          sharePlanHashInput.value = hashId;
+          copyFeedback.style.display = "none";
+          const modal = bootstrap.Modal.getOrCreateInstance(sharePlanModal);
+          modal.show();
+        };
+      });
+    }
+
+    copyPlanHashBtn.onclick = function() {
+      sharePlanHashInput.select();
+      sharePlanHashInput.setSelectionRange(0, 99999); // For mobile
+      document.execCommand("copy");
+      copyFeedback.style.display = "block";
+      setTimeout(() => { copyFeedback.style.display = "none"; }, 1500);
+    };
+
+    function joinBtnHandler(e) {
+      e.preventDefault();
+      const planHashId = document.getElementById("plan-hash-id").value;
+      fetch(`/plans/api/plans/${planHashId}/join`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data =>{
+        joinResponse.innerHTML = "<label class='form-label'>Select Your Name</label>";
+        if (Array.isArray(data) && data.length > 0) {
+          const select = document.createElement("select");
+          select.className = "form-select mb-2";
+          select.name = "participant_name";
+          data.forEach(participant => {
+            if (participant.id === null) {
+              const option = document.createElement("option");
+              option.value = participant.name;
+              option.textContent = participant.name;
+              select.appendChild(option);
+            }
+          });
+          joinResponse.appendChild(select);
+          const confirmJoinBtn = document.createElement("button");
+          confirmJoinBtn.type = "submit";
+          confirmJoinBtn.className = "btn btn-primary";
+          confirmJoinBtn.id = "confirm-join-btn";
+          confirmJoinBtn.textContent = "Join Plan";
+          joinFooter.appendChild(confirmJoinBtn);
+          confirmJoinBtn.onclick = e => {
+            joinForm.onsubmit(e);
+          };
+        } else {
+          joinResponse.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        }
+      });
+    }
 
     window.deletePlan = function(id) {
       fetch(`/plans/api/plans/${id}`, { method: "DELETE" }).then(loadPlans);
@@ -153,40 +322,7 @@
     };
 
     joinBtn.onclick = e => {
-      e.preventDefault();
-      const planHashId = document.getElementById("plan-hash-id").value;
-      fetch(`/plans/api/plans/${planHashId}/join`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" }
-      })
-      .then(res => res.json())
-      .then(data =>{
-        joinResponse.innerHTML = "<label class='form-label'>Select Your Name</label>";
-        if (Array.isArray(data) && data.length > 0) {
-          const select = document.createElement("select");
-          select.className = "form-select mb-2";
-          select.name = "participant_name";
-          data.forEach(participant => {
-            if (participant.id === null) {
-              const option = document.createElement("option");
-              option.value = participant.name;
-              option.textContent = participant.name;
-              select.appendChild(option);
-            }
-          });
-          joinResponse.appendChild(select);
-          joinFooter.innerHTML = `<button type="submit" class="btn btn-primary">Join Plan</button>`;
-          const confirmJoinBtn = document.getElementById("confirm-join-btn");
-          if (confirmJoinBtn) {
-            confirmJoinBtn.onclick = function() {
-              joinForm.requestSubmit(); // triggers joinForm.onsubmit
-            };
-          }
-        } else {
-          joinResponse.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-          joinFooter.innerHTML = "";
-        }
-      });
+      joinBtnHandler(e);
     };
 
     joinForm.onsubmit = e => {
@@ -204,6 +340,22 @@
       });
     };
 
+    modifyForm.onsubmit = e => {
+      e.preventDefault();
+      const planName = modifyPlanNameInput.value;
+      const participantInputs = modifyParticipantsList.querySelectorAll(".participant-input");
+      const participants = Array.from(participantInputs).map(p => p.value.trim()).filter(Boolean);
+
+      fetch(`/plans/api/plans/${currentModifyPlanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: planName, participants })
+      }).then(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modifyPlanModal'));
+        modal.hide();
+        loadPlans();
+      });
+    };
     loadPlans();
   });
   </script>

@@ -254,10 +254,117 @@ function loadStatistics(planId) {
     .then(html => {
       const planContent = document.getElementById("plan-content");
       planContent.innerHTML = html;
-      // Do NOT call initStatisticSection(planId) here!
+      renderBalanceChart();
     });
+    
 }
 
-function initStatisticsSection(planId) {
-  loadStatistics(planId);
+function renderStatisticChart() {
+  const canvas = document.getElementById('balanceChart');
+  if (!canvas) return;  
+  const balanceList = document.getElementById('balance-list');
+  const totalExpenseList = document.getElementById('total-expense-list');
+  const realExpenseList = document.getElementById('real-expense-list');
+  if (!balanceList && !totalExpenseList && !realExpenseList) {
+    console.warn("Required lists are missing in the DOM.");
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  const labels = [];
+  const balaceData = [];
+  const totalExpenseData = [];
+  const realExpenseData = [];
+
+  if (balanceList){
+    balanceList.querySelectorAll('li').forEach(item => {
+      const name = item.querySelector('.participant-name')?.textContent.trim();
+      const amount = item.querySelector('.participant-amount')?.textContent.trim();
+      if (name && amount) {
+        labels.push(name);
+        balaceData.push(parseFloat(amount));
+      }
+    });
+  }
+
+  if (totalExpenseList) {
+    totalExpenseList.querySelectorAll('li').forEach(item => {
+      const name = item.querySelector('.participant-name')?.textContent.trim();
+      const amount = item.querySelector('.participant-amount')?.textContent.trim();
+      if (name && amount) {
+        totalExpenseData.push(parseFloat(amount));
+      }
+    });
+  }
+
+  if (realExpenseList) {
+    realExpenseList.querySelectorAll('li').forEach(item => {
+      const name = item.querySelector('.participant-name')?.textContent.trim();
+      const amount = item.querySelector('.participant-amount')?.textContent.trim();
+      if (name && amount) {
+        realExpenseData.push(parseFloat(amount));
+      }
+    });
+  }
+
+  console.log("Rendering chart with labels:", labels);
+  console.log("Rendering chart with data:", balaceData, totalExpenseData, realExpenseData);
+ 
+  if (labels.length === 0) {
+    console.info("No labeled data to render chart");
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  const planTotal = (totalExpenseData.length ? totalExpenseData.reduce((a,b)=>a+b,0)
+                    : (balaceData.length ? balaceData.reduce((a,b)=>a+b,0) : 0));
+  console.log("Plan total for horizontal line:", planTotal);
+  
+  const ctx = canvas.getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Balance',
+        data: balaceData,
+        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Total Expense',
+        data: totalExpenseData,
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1
+      },
+      {
+        label: 'Real Expense',
+        data: realExpenseData,
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      reponsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: `Plan total expense: $${planTotal.toFixed(2)}`,
+          font: { size: 16 }
+        },
+        legend: { position: 'top' }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+function initStatisticsSection() {
+  renderStatisticChart();
 }

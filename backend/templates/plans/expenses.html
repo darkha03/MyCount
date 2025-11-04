@@ -12,10 +12,14 @@
     {% for expense in expenses_by_date[date] %}
       <div class="expense-item">
         <li class="list-group-item py-3" style="cursor:pointer;" data-id="{{ expense.id }}">
-          <div class="d-flex justify-content-between align-items-center w-100">
-            <span class="fw-bold">{{ expense.name }}</span>
-            <span>Payed by: {{ expense.payer }}</span>
-            <span>Amount: {{ expense.amount }}</span>
+          <div class="d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center w-100">
+              <span class="fw-bold">{{ expense.name }}</span>
+              <span class="fw-bold">Amount: {{ expense.amount }}</span>
+            </div>
+            <div class="text-muted small mt-1">
+              Payed by: {{ expense.payer }}
+            </div>
           </div>
         </li>
       </div>
