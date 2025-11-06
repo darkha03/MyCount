@@ -1,17 +1,240 @@
+MyCount
+=======
+
+A simple, learning-focused expense sharing app built with Flask. Create shared plans, add expenses, split costs between participants, see who owes whom, and visualize balances with charts.
+
+Note: This is a work-in-progress learning project. The codebase demonstrates Flask blueprints, authentication, SQLAlchemy models and migrations, a responsive Bootstrap UI, and basic data visualization with Chart.js.
+
+Tech stack
+----------
+
+- Backend
+	- Python 3.x, Flask 3.x
+	- Flask-Migrate (Alembic) for schema migrations
+	- SQLAlchemy 2.x ORM (SQLite by default)
+	- Jinja2 templating
+- Frontend
+	- Bootstrap 5.3 (responsive layout and components)
+	- Chart.js (bar charts for statistics)
+	- Vanilla JavaScript (global scripts in `backend/static/js/app.js`)
+- Tooling
+	- `pip` with a pinned `requirements.txt`
+
+Project structure
+-----------------
+
+```
+mycount/
+├─ backend/
+│  ├─ app.py                      # Flask app factory (create_app), blueprints registration
+│  ├─ config.py                   # Centralized Flask/DB configuration
+│  ├─ models.py                   # SQLAlchemy models: User, Plan, PlanParticipant, Expense, ExpenseShare
+│  ├─ routes/
+│  │  ├─ auth/                    # Auth blueprint (login/logout)
+│  │  └─ plans/                   # Plans blueprint (CRUD, sections)
+│  ├─ templates/
+│  │  ├─ layout.html              # Base layout (Bootstrap, nav, global JS/CSS)
+│  │  ├─ index.html               # Dashboard (recent plans + reimbursements)
+│  │  ├─ auth/                    # Login/Register views
+│  │  └─ plans/                   # Plan pages (dashboard, expenses, statistics, reimbursements, view)
+│  ├─ static/
+│  │  ├─ css/style.css            # Global styling
+│  │  └─ js/app.js                # Global JS (page-specific hooks)
+│  └─ utils/auth.py               # @login_required decorator
+│
+├─ migrations/                    # Alembic migrations (checked-in)
+│  ├─ env.py
+│  ├─ alembic.ini
+│  ├─ script.py.mako
+│  └─ versions/                   # Auto-generated migration scripts
+│
+├─ instance/                      # SQLite DB lives here (created at runtime)
+├─ requirements.txt               # Locked dependencies
+└─ README.md                      # This file
+```
+
+Features (current)
+------------------
+
+- Authentication and session handling (simple username/password)
+- Plans
+	- Create, view, modify, delete (leave) plans
+	- Share a plan via hash ID (copy from modal)
+	- Dashboard shows recent plans (cards, responsive grid)
+- Expenses
+	- Add, view, group by date (section header per day)
+	- Split evenly or custom amounts per participant
+	- Edit/delete expense; live recalculation in the form
+- Reimbursements
+	- Compute who owes whom using a greedy settle-up
+	- “Mark as Paid” posts a reimbursement as an expense
+- Statistics
+	- Bar chart of participant balances (Chart.js)
+	- Optional datasets for total vs real expenses
+	- Reads labels/data from rendered HTML and builds the chart dynamically
+- UI/UX
+	- Bootstrap 5 responsive layout
+	- Mobile-friendly navbar (toggler)
+	- Cards and list groups for clean lists
+
+Getting started
+---------------
+
+Prerequisites
+-------------
+
+- Python 3.10+ (recommended)
+- Windows (commands below use Command Prompt). PowerShell equivalents are provided when useful.
+
+Setup
+-----
+
+```cmd
+:: from project root
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-python backen\app.py
+Configure environment (optional)
+--------------------------------
 
-project/
-├── app.py
-├── templates/
-│   ├── layout.html
-│   └── auth/
-│       ├── login.html
-│       └── register.html
-├── blueprints/
-│   ├── __init__.py
-│   ├── plans/
-│   └── auth/           
-│       ├── __init__.py
-│       └── routes.py
+- App reads settings from `backend/config.py`. You can override via environment variables:
+	- `SECRET_KEY` (session signing)
+	- `DATABASE_URL` (e.g., `sqlite:///C:\\path\\to\\mycount.db` or Postgres URL)
+- Default SQLite DB is created at `<project_root>\instance\mycount.db` (auto-created).
+
+Initialize the database
+-----------------------
+
+Using Flask-Migrate (Alembic):
+
+```cmd
+:: tell Flask where the app factory is
+set FLASK_APP=backend.app:create_app
+
+:: initialize migrations (only once per project)
+flask db init
+
+:: create initial migration based on models
+flask db migrate -m "initial schema"
+
+:: apply migrations
+flask db upgrade
+```
+
+If you already have a `migrations/` folder in the repo, you can skip `flask db init` and directly run `flask db upgrade`.
+
+Run the app (development)
+-------------------------
+
+```cmd
+set FLASK_APP=backend.app:create_app
+set FLASK_DEBUG=1
+flask run
+```
+
+- Now open http://127.0.0.1:5000/
+- If you hit a login page, create or seed a user as needed.
+
+Common commands (PowerShell)
+----------------------------
+
+```powershell
+# PowerShell environment variables (no spaces around '=')
+$env:FLASK_APP="backend.app:create_app"
+$env:FLASK_DEBUG="1"
+flask run
+
+# Migrations
+flask db migrate -m "change something"
+flask db upgrade
+flask db current
+flask db heads
+```
+
+What’s implemented and what I learned
+-------------------------------------
+
+- Structured a Flask application with an app factory and blueprints (auth, plans)
+- Session-based auth with a custom `@login_required` decorator
+- SQLAlchemy model design with relationships (Plan ↔ Participants, Expenses ↔ Shares)
+- Introduced Alembic/Flask-Migrate for evolving schema reliably (vs `db.create_all()`)
+- Handled SQLite path pitfalls by using absolute `instance/` DB path and ensuring the directory exists
+- Built responsive UI using Bootstrap (grid, cards, list groups, navbar toggler)
+- Wrote modular JS to:
+	- Load plan sections via fetch and inject HTML
+	- Manage form logic (even split vs manual amounts, enabling/disabling inputs)
+	- Avoid duplicate event listeners when reloading sections
+	- Render charts with Chart.js from DOM-extracted data
+- Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
+
+How to use (quick tour)
+-----------------------
+
+- Create or join a plan from the Plans page
+- Add expenses, select payer, split amounts (evenly or manually)
+- View reimbursements and optionally “Mark as Paid” to settle
+- See statistics (balances, totals) and a bar chart summarizing the plan
+
+API/Routes (selected)
+---------------------
+
+- `GET /` → Dashboard (recent plans, reimbursements)
+- `GET /plans` → Plans dashboard (cards)
+- `GET /plans/<hash_id>` → View plan with sections (expenses, reimbursements, statistics)
+- `GET /plans/api/plans` → JSON list of user’s plans
+- `POST /plans/api/plans` → Create a new plan
+- `PUT /plans/api/plans/<plan_id>` → Modify plan
+- `DELETE /plans/api/plans/<plan_id>` → Leave/delete plan
+
+Note: Most plan actions are under the `plans` blueprint and require login.
+
+Troubleshooting
+---------------
+
+- “No such command 'db'”
+	- Ensure `Flask-Migrate` is installed and `Migrate(app, db)` (or `migrate.init_app`) is called in `create_app()`
+- `ModuleNotFoundError: No module named 'backend'`
+	- Run via Flask CLI or module mode: `set FLASK_APP=backend.app:create_app && flask run` (or `python -m backend.app`)
+- SQLite path mismatch
+	- Config uses an absolute path under `instance/`. Verify the printed `DB URL:` on startup
+- Migration warnings about FKs on SQLite
+	- SQLite is limited with altering FKs; warnings are expected in dev. Use Postgres in production
+- Chart not rendering
+	- Ensure Chart.js is loaded before your page JS and call the render function after injecting the HTML
+
+Security notes
+--------------
+
+- Never commit real secrets. Set `SECRET_KEY` and DB URLs via environment variables in production
+- Avoid hardcoding credentials in JS/HTML
+
+Roadmap
+-------
+
+- Proper user registration and password reset
+- Invite flows and role-based permissions per plan
+- Better reimbursement recording and history
+- Export/Import (CSV)
+- Test suite and CI
+
+Screenshots / Demo (placeholders)
+---------------------------------
+
+- Live demo: https://example.com (coming soon)
+- Screenshots: place images in `docs/` and reference here
+
+```
+![Dashboard](docs/dashboard.png)
+![Plan Details](docs/plan.png)
+![Expenses Section](docs/expense.png)
+![Create Expense](docs/create-expense.png)
+![Reimbursement Section](docs/reimbursement.png)
+![Statistic Section](docs/statistic.png)
+```
+
+License
+-------
+
+
