@@ -226,12 +226,12 @@ Screenshots / Demo (placeholders)
 - Screenshots: place images in `docs/` and reference here
 
 ```
-![Dashboard](docs/dashboard.png)
-![Plan Details](docs/plan.png)
-![Expenses Section](docs/expense.png)
-![Create Expense](docs/create-expense.png)
-![Reimbursement Section](docs/reimbursement.png)
-![Statistic Section](docs/statistic.png)
+![Dashboard](docs/dashboard.jpg)
+![Plan Details](docs/plan.jpg)
+![Expenses Section](docs/expense.jpg)
+![Create Expense](docs/create-expense.jpg)
+![Reimbursement Section](docs/reimbursement.jpg)
+![Statistic Section](docs/statistic.jpg)
 ```
 
 License
