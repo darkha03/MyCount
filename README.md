@@ -84,15 +84,24 @@ Prerequisites
 -------------
 
 - Python 3.10+ (recommended)
-- Windows (commands below use Command Prompt). PowerShell equivalents are provided when useful.
+- Works on Windows, Linux, and macOS
 
 Setup
 -----
 
+**Windows (Command Prompt):**
 ```cmd
 :: from project root
 python -m venv venv
 venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**Linux / macOS:**
+```bash
+# from project root
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -109,6 +118,7 @@ Initialize the database
 
 Using Flask-Migrate (Alembic):
 
+**Windows (Command Prompt):**
 ```cmd
 :: tell Flask where the app factory is
 set FLASK_APP=backend.app:create_app
@@ -123,34 +133,68 @@ flask db migrate -m "initial schema"
 flask db upgrade
 ```
 
+**Linux / macOS:**
+```bash
+# tell Flask where the app factory is
+export FLASK_APP=backend.app:create_app
+
+# initialize migrations (only once per project)
+flask db init
+
+# create initial migration based on models
+flask db migrate -m "initial schema"
+
+# apply migrations
+flask db upgrade
+```
+
 If you already have a `migrations/` folder in the repo, you can skip `flask db init` and directly run `flask db upgrade`.
 
 Run the app (development)
 -------------------------
 
+**Windows (Command Prompt):**
 ```cmd
 set FLASK_APP=backend.app:create_app
 set FLASK_DEBUG=1
 flask run
 ```
 
-- Now open http://127.0.0.1:5000/
-- If you hit a login page, create or seed a user as needed.
-
-Common commands (PowerShell)
-----------------------------
-
+**Windows (PowerShell):**
 ```powershell
-# PowerShell environment variables (no spaces around '=')
 $env:FLASK_APP="backend.app:create_app"
 $env:FLASK_DEBUG="1"
 flask run
+```
 
-# Migrations
-flask db migrate -m "change something"
+**Linux / macOS:**
+```bash
+export FLASK_APP=backend.app:create_app
+export FLASK_DEBUG=1
+flask run
+```
+
+- Now open http://127.0.0.1:5000/
+- If you hit a login page, create or seed a user as needed.
+
+Common migration commands (cross-platform)
+-------------------------------------------
+
+```bash
+# Create a new migration after model changes
+flask db migrate -m "describe your changes"
+
+# Apply pending migrations
 flask db upgrade
+
+# Show current migration version
 flask db current
-flask db heads
+
+# Show migration history
+flask db history
+
+# Rollback one migration
+flask db downgrade
 ```
 
 What’s implemented and what I learned
@@ -223,16 +267,16 @@ Screenshots / Demo (placeholders)
 ---------------------------------
 
 - Live demo: https://example.com (coming soon)
-- Screenshots: place images in `docs/` and reference here
+- Screenshots: 
 
-```
-![Dashboard](docs/dashboard.png)
-![Plan Details](docs/plan.png)
-![Expenses Section](docs/expense.png)
-![Create Expense](docs/create-expense.png)
-![Reimbursement Section](docs/reimbursement.png)
-![Statistic Section](docs/statistic.png)
-```
+
+![Dashboard](docs/dashboard.jpg)
+![Plan Details](docs/plan.jpg)
+![Expenses Section](docs/expense.jpg)
+![Create Expense](docs/create-expense.jpg)
+![Reimbursement Section](docs/reimbursement.jpg)
+![Statistic Section](docs/statistic.jpg)
+
 
 License
 -------
