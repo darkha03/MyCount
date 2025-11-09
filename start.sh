@@ -3,14 +3,24 @@ set -euo pipefail
 
 echo "Running diagnostic..."
 python - <<'PY'
-import os, psycopg
-url = os.environ.get("DATABASE_URL")
-print("Raw DATABASE_URL:", url)
+import os
+from sqlalchemy import create_engine
+
+raw_url = os.environ.get("DATABASE_URL")
+print("Raw DATABASE_URL:", raw_url)
+
+# Apply the same normalization as config.py
+if raw_url and raw_url.startswith("postgres://"):
+    raw_url = raw_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif raw_url and raw_url.startswith("postgresql://"):
+    raw_url = raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+
 try:
-    with psycopg.connect(url) as conn:
-        with conn.cursor() as cur:
-            cur.execute("select version()")
-            print("Connected:", cur.fetchone())
+    engine = create_engine(raw_url)
+    with engine.connect() as conn:
+        result = conn.execute("select version()")
+        print("Connected:", result.fetchone())
 except Exception as e:
     print("Connection error:", e)
 PY
