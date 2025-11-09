@@ -118,16 +118,12 @@ Initialize the database
 
 Using Flask-Migrate (Alembic):
 
+Important: This repo already includes a populated `migrations/` folder. On a fresh clone, you typically do NOT run `flask db init` or `flask db migrate`. Just run `flask db upgrade` to create the database and tables.
+
 **Windows (Command Prompt):**
 ```cmd
 :: tell Flask where the app factory is
 set FLASK_APP=backend.app:create_app
-
-:: initialize migrations (only once per project)
-flask db init
-
-:: create initial migration based on models
-flask db migrate -m "initial schema"
 
 :: apply migrations
 flask db upgrade
@@ -138,17 +134,11 @@ flask db upgrade
 # tell Flask where the app factory is
 export FLASK_APP=backend.app:create_app
 
-# initialize migrations (only once per project)
-flask db init
-
-# create initial migration based on models
-flask db migrate -m "initial schema"
-
 # apply migrations
 flask db upgrade
 ```
 
-If you already have a `migrations/` folder in the repo, you can skip `flask db init` and directly run `flask db upgrade`.
+If you already have a `migrations/` folder in the repo (this project does), skip `flask db init` and `flask db migrate` and run only `flask db upgrade`.
 
 Run the app (development)
 -------------------------
