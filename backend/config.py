@@ -15,11 +15,14 @@ class Config:
     BASE_DIR = Path(__file__).resolve().parent.parent  # project root (folder that contains `backend/`)
     DEFAULT_DB_PATH = BASE_DIR / "instance" / "mycount.db"
 
-    # Normalize DATABASE_URL for SQLAlchemy and prefer psycopg v3 driver
+    # Normalize DATABASE_URL for SQLAlchemy and prefer appropriate drivers
     _raw_db_url = os.environ.get("DATABASE_URL")
     if _raw_db_url:
-        if _raw_db_url.startswith("postgres://"):
-            # e.g., render/heroku style
+        # PythonAnywhere MySQL: mysql:// -> mysql+mysqldb://
+        if _raw_db_url.startswith("mysql://"):
+            _raw_db_url = _raw_db_url.replace("mysql://", "mysql+mysqldb://", 1)
+        # Render/Heroku Postgres: postgres:// -> postgresql+psycopg://
+        elif _raw_db_url.startswith("postgres://"):
             _raw_db_url = _raw_db_url.replace("postgres://", "postgresql+psycopg://", 1)
         elif _raw_db_url.startswith("postgresql://"):
             _raw_db_url = _raw_db_url.replace("postgresql://", "postgresql+psycopg://", 1)

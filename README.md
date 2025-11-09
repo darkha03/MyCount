@@ -249,14 +249,13 @@ Roadmap
 
 - Proper user registration and password reset
 - Invite flows and role-based permissions per plan
-- Better reimbursement recording and history
 - Export/Import (CSV)
 - Test suite and CI
 
-Screenshots / Demo (placeholders)
+Screenshots / Demo
 ---------------------------------
 
-- Live demo: https://example.com (coming soon)
+- Live demo: https://darkha03.pythonanywhere.com/
 - Screenshots: 
 
 
