@@ -4,25 +4,21 @@ set -euo pipefail
 echo "Running diagnostic..."
 python - <<'PY'
 import os
-from sqlalchemy import create_engine
+from urllib.parse import urlparse
 
-raw_url = os.environ.get("DATABASE_URL")
-print("Raw DATABASE_URL:", raw_url)
-
-# Apply the same normalization as config.py
-if raw_url and raw_url.startswith("postgres://"):
-    raw_url = raw_url.replace("postgres://", "postgresql+psycopg://", 1)
-elif raw_url and raw_url.startswith("postgresql://"):
-    raw_url = raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
-
+raw = os.environ.get("DATABASE_URL")
+print("Raw URL:", raw[:50] + "..." if len(raw) > 50 else raw)
 
 try:
-    engine = create_engine(raw_url)
-    with engine.connect() as conn:
-        result = conn.execute("select version()")
-        print("Connected:", result.fetchone())
+    parsed = urlparse(raw)
+    print(f"Scheme: {parsed.scheme}")
+    print(f"Username: {parsed.username}")
+    print(f"Password: {'***' if parsed.password else None}")
+    print(f"Hostname: {parsed.hostname}")
+    print(f"Port: {parsed.port}")
+    print(f"Path: {parsed.path}")
 except Exception as e:
-    print("Connection error:", e)
+    print("Parse error:", e)
 PY
 
 echo "Running DB migrations..."
