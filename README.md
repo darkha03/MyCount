@@ -49,7 +49,22 @@ mycount/
 │  └─ versions/                   # Auto-generated migration scripts
 │
 ├─ instance/                      # SQLite DB lives here (created at runtime)
+├─ tests/                         # Pytest suite (fixtures + unit/feature tests)
+│  ├─ conftest.py                 # App/test client + factory fixtures
+│  ├─ test_auth.py                # Auth flow tests (register/login)
+│  ├─ test_plans.py               # Plan creation & retrieval tests
+│  └─ test_statistics.py          # Pure logic tests (balance/expense calculations)
+│
+├─ scripts/
+│  └─ pull_and_reload.sh          # PythonAnywhere scheduled deployment script
+├─ start.sh                       # Render start script (migrations + gunicorn)
+├─ wsgi.py                        # PythonAnywhere WSGI entrypoint
+├─ docs/                          # Screenshots and documentation assets
 ├─ requirements.txt               # Locked dependencies
+├─ requirements-dev.txt           # Dev/test tooling (pytest, ruff, coverage, Flask-Testing)
+├─ .github/
+│  └─ workflows/
+│     └─ ci.yml                   # GitHub Actions (lint + tests + optional deploy)
 └─ README.md                      # This file
 ```
 
@@ -76,6 +91,66 @@ Features (current)
 	- Bootstrap 5 responsive layout
 	- Mobile-friendly navbar (toggler)
 	- Cards and list groups for clean lists
+
+What’s implemented and what I learned
+-------------------------------------
+
+- Structured a Flask application with an app factory and blueprints (auth, plans)
+- Session-based auth with a custom `@login_required` decorator
+- SQLAlchemy model design with relationships (Plan ↔ Participants, Expenses ↔ Shares)
+- Introduced Alembic/Flask-Migrate for evolving schema reliably (vs `db.create_all()`)
+- Handled SQLite path pitfalls by using absolute `instance/` DB path and ensuring the directory exists
+- Built responsive UI using Bootstrap (grid, cards, list groups, navbar toggler)
+- Wrote modular JS to:
+	- Load plan sections via fetch and inject HTML
+	- Manage form logic (even split vs manual amounts, enabling/disabling inputs)
+	- Avoid duplicate event listeners when reloading sections
+	- Render charts with Chart.js from DOM-extracted data
+- Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
+
+How to use (quick tour)
+-----------------------
+
+- Create or join a plan from the Plans page
+- Add expenses, select payer, split amounts (evenly or manually)
+- View reimbursements and optionally “Mark as Paid” to settle
+- See statistics (balances, totals) and a bar chart summarizing the plan
+
+API/Routes (selected)
+---------------------
+
+- `GET /` → Dashboard (recent plans, reimbursements)
+- `GET /plans` → Plans dashboard (cards)
+- `GET /plans/<hash_id>` → View plan with sections (expenses, reimbursements, statistics)
+- `GET /plans/api/plans` → JSON list of user’s plans
+- `POST /plans/api/plans` → Create a new plan
+- `PUT /plans/api/plans/<plan_id>` → Modify plan
+- `DELETE /plans/api/plans/<plan_id>` → Leave/delete plan
+
+Note: Most plan actions are under the `plans` blueprint and require login.
+
+Roadmap
+-------
+
+- Proper user registration and password reset
+- Invite flows and role-based permissions per plan
+- Export/Import (CSV)
+- Test suite and CI
+
+Screenshots / Demo
+---------------------------------
+
+- Live demo: https://darkha03.pythonanywhere.com/
+
+- Screenshots: 
+
+![Dashboard](docs/dashboard.jpg)
+![Plan Details](docs/plan.jpg)
+![Expenses Section](docs/expense.jpg)
+![Create Expense](docs/create-expense.jpg)
+![Reimbursement Section](docs/reimbursement.jpg)
+![Statistic Section](docs/statistic.jpg)
+
 
 Getting started
 ---------------
@@ -187,87 +262,119 @@ flask db history
 flask db downgrade
 ```
 
-What’s implemented and what I learned
--------------------------------------
 
-- Structured a Flask application with an app factory and blueprints (auth, plans)
-- Session-based auth with a custom `@login_required` decorator
-- SQLAlchemy model design with relationships (Plan ↔ Participants, Expenses ↔ Shares)
-- Introduced Alembic/Flask-Migrate for evolving schema reliably (vs `db.create_all()`)
-- Handled SQLite path pitfalls by using absolute `instance/` DB path and ensuring the directory exists
-- Built responsive UI using Bootstrap (grid, cards, list groups, navbar toggler)
-- Wrote modular JS to:
-	- Load plan sections via fetch and inject HTML
-	- Manage form logic (even split vs manual amounts, enabling/disabling inputs)
-	- Avoid duplicate event listeners when reloading sections
-	- Render charts with Chart.js from DOM-extracted data
-- Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
+CI/CD (GitHub Actions + deployment)
+-----------------------------------
 
-How to use (quick tour)
------------------------
+This project is set up to run fast checks in CI and supports two deployment paths: Render (optional push-to-deploy) and PythonAnywhere (pull-based via a scheduled task).
 
-- Create or join a plan from the Plans page
-- Add expenses, select payer, split amounts (evenly or manually)
-- View reimbursements and optionally “Mark as Paid” to settle
-- See statistics (balances, totals) and a bar chart summarizing the plan
+Continuous Integration (CI)
+---------------------------
 
-API/Routes (selected)
----------------------
+Recommended CI stages:
 
-- `GET /` → Dashboard (recent plans, reimbursements)
-- `GET /plans` → Plans dashboard (cards)
-- `GET /plans/<hash_id>` → View plan with sections (expenses, reimbursements, statistics)
-- `GET /plans/api/plans` → JSON list of user’s plans
-- `POST /plans/api/plans` → Create a new plan
-- `PUT /plans/api/plans/<plan_id>` → Modify plan
-- `DELETE /plans/api/plans/<plan_id>` → Leave/delete plan
+- Lint: ruff
+- Test: pytest (uses a temporary SQLite file DB via test fixtures)
 
-Note: Most plan actions are under the `plans` blueprint and require login.
+Example workflow file (create at `.github/workflows/ci.yml`):
 
-Troubleshooting
----------------
+```yaml
+name: CI
 
-- “No such command 'db'”
-	- Ensure `Flask-Migrate` is installed and `Migrate(app, db)` (or `migrate.init_app`) is called in `create_app()`
-- `ModuleNotFoundError: No module named 'backend'`
-	- Run via Flask CLI or module mode: `set FLASK_APP=backend.app:create_app && flask run` (or `python -m backend.app`)
-- SQLite path mismatch
-	- Config uses an absolute path under `instance/`. Verify the printed `DB URL:` on startup
-- Migration warnings about FKs on SQLite
-	- SQLite is limited with altering FKs; warnings are expected in dev. Use Postgres in production
-- Chart not rendering
-	- Ensure Chart.js is loaded before your page JS and call the render function after injecting the HTML
+on:
+	push:
+		branches: [ main ]
+	pull_request:
+		branches: [ main ]
 
-Security notes
---------------
+jobs:
+	build-and-test:
+		runs-on: ubuntu-latest
+		steps:
+			- uses: actions/checkout@v4
+			- uses: actions/setup-python@v5
+				with:
+					python-version: '3.11'
+			- name: Install dependencies
+				run: |
+					python -m pip install --upgrade pip
+					pip install -r requirements.txt
+					pip install -r requirements-dev.txt
+			- name: Lint (ruff)
+				run: ruff check .
+			- name: Tests (pytest)
+				run: pytest -q
+```
 
-- Never commit real secrets. Set `SECRET_KEY` and DB URLs via environment variables in production
-- Avoid hardcoding credentials in JS/HTML
+Notes:
 
-Roadmap
--------
+- Dev dependencies are in `requirements-dev.txt` (ruff, pytest, coverage, Flask-Testing).
+- Tests rely on `tests/conftest.py`, which creates a temporary SQLite database per test. No external DB needed in CI.
 
-- Proper user registration and password reset
-- Invite flows and role-based permissions per plan
-- Export/Import (CSV)
-- Test suite and CI
+Optional: Deploy to Render
+--------------------------
 
-Screenshots / Demo
----------------------------------
+If you deploy on Render, use `start.sh` as the Start Command. It runs database migrations and then launches Gunicorn. In your Render service settings:
 
-- Live demo: https://darkha03.pythonanywhere.com/
-- Screenshots: 
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `bash start.sh`
 
+Environment variables on Render (Dashboard → Environment):
 
-![Dashboard](docs/dashboard.jpg)
-![Plan Details](docs/plan.jpg)
-![Expenses Section](docs/expense.jpg)
-![Create Expense](docs/create-expense.jpg)
-![Reimbursement Section](docs/reimbursement.jpg)
-![Statistic Section](docs/statistic.jpg)
+- `SECRET_KEY` (required)
+- `DATABASE_URL` (required; e.g., `postgresql+psycopg://user:pass@host:6543/dbname`)
 
+Optional GitHub Actions deploy step (requires secrets):
 
-License
--------
+- `RENDER_API_KEY`: a Render API key
+- `RENDER_SERVICE_ID`: the service ID to deploy
+
+Deploy job example (add to the same workflow and gate on `main`):
+
+```yaml
+	deploy-render:
+		if: github.ref == 'refs/heads/main'
+		needs: build-and-test
+		runs-on: ubuntu-latest
+		steps:
+			- uses: actions/checkout@v4
+			- name: Trigger Render deploy
+				env:
+					RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+					RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+				run: |
+					curl -s -X POST \
+						-H "Authorization: Bearer $RENDER_API_KEY" \
+						-H "Content-Type: application/json" \
+						https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys
+```
+
+PythonAnywhere deployment (pull-based)
+--------------------------------------
+
+For PythonAnywhere, deployments are handled by a scheduled task that pulls the latest code, installs dependencies, applies migrations, and reloads the app. Use the provided script:
+
+- `scripts/pull_and_reload.sh` — set it as a Scheduled Task in PythonAnywhere.
+- Create an `env.sh` (not committed) alongside it to export secrets before running:
+
+```bash
+export SECRET_KEY="your-prod-secret"
+export DATABASE_URL="mysql+mysqldb://user:pass@host/dbname"
+```
+
+Then schedule the task to run the script, e.g.:
+
+```bash
+bash ~/mycount/scripts/pull_and_reload.sh
+```
+
+WSGI entry point for PythonAnywhere is `wsgi.py`, which imports `create_app()` from `backend.app`.
+
+Environment & security recap
+----------------------------
+
+- Never commit real secrets; set them via your hosting provider or `env.sh` (PythonAnywhere).
+- `DATABASE_URL` is normalized automatically: `postgres` → `postgresql+psycopg`, `mysql` → `mysql+mysqldb`.
+- Default dev DB is SQLite stored under `instance/mycount.db` and created automatically.
 
 

@@ -31,7 +31,8 @@ def get_plans_api():
         return jsonify({"error": "User not found"}), 404
     user_plans = []
     for participation in user.participations:
-        plan = Plan.query.get(participation.plan_id)
+        # Use SQLAlchemy 2.0 style session.get to avoid LegacyAPIWarning
+        plan = db.session.get(Plan, participation.plan_id)
         if plan:
             participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
             expenses = Expense.query.filter_by(plan_id=plan.id).all()
