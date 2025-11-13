@@ -276,6 +276,27 @@ Recommended CI stages:
 - Lint: ruff
 - Test: pytest (uses a temporary SQLite file DB via test fixtures)
 
+Ruff configuration and PR‑based workflow
+---------------------------------------
+
+This project uses ruff for fast linting and formatting. Configuration is kept in `pyproject.toml` so both local tooling and CI use the same rules. The repository ships a `pyproject.toml` with `line-length = 100` to match our style guide.
+
+Local checks vs CI checks
+-------------------------
+
+- Local pre-commit: Developers are encouraged to install `pre-commit` and enable hooks (the repo includes `.pre-commit-config.yaml`) so `ruff format` and `ruff check` run before commits. This improves developer feedback but is not a substitute for CI.
+- CI on Pull Requests (recommended): The authoritative checks run in CI on pull requests. Open a PR and let the CI run linting and tests; require those checks to pass via branch protection before merging.
+
+Example `pyproject.toml` snippet (already in the project):
+
+```toml
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "C", "B"]
+ignore = ["E203", "W503"]
+exclude = ["migrations", "instance", "docs", ".venv", "backend/static"]
+```
+
 Example workflow file (create at `.github/workflows/ci.yml`):
 
 ```yaml
@@ -300,16 +321,35 @@ jobs:
 					python -m pip install --upgrade pip
 					pip install -r requirements.txt
 					pip install -r requirements-dev.txt
-			- name: Lint (ruff)
-				run: ruff check .
+					- name: Lint (ruff)
+						run: ruff check .
 			- name: Tests (pytest)
 				run: pytest -q
 ```
 
 Notes:
 
-- Dev dependencies are in `requirements-dev.txt` (ruff, pytest, coverage, Flask-Testing).
+- Dev dependencies are in `requirements-dev.txt` (ruff, pytest, coverage, Flask-Testing, pre-commit).
 - Tests rely on `tests/conftest.py`, which creates a temporary SQLite database per test. No external DB needed in CI.
+
+Recommended PR workflow
+-----------------------
+
+1. Create a feature branch and make your changes.
+2. Run local checks:
+
+```powershell
+ruff format .
+ruff check .
+pre-commit run --all-files
+pytest -q
+```
+
+3. Push your branch and open a pull request against `main`. The CI runs lint and tests on the PR. Configure GitHub branch protection to require the CI job (`CI / CD`) to pass before merging.
+
+4. When the CI checks are green and reviews are complete, merge via the PR UI.
+
+This approach prevents broken code from reaching `main` and keeps the main branch stable.
 
 Optional: Deploy to Render
 --------------------------

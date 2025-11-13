@@ -1,4 +1,8 @@
-from backend.routes.plans import calculate_balance, calculate_expense, calculate_real_expense
+from backend.routes.plans import (
+    calculate_balance,
+    calculate_expense,
+    calculate_real_expense,
+)
 
 
 def test_statistics_reimbursement_excluded():

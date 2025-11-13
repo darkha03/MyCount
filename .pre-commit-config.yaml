@@ -1,0 +1,28 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: ruff
+        language: python
+        types: [python]
+        args: ["format", "."]
+        additional_dependencies: ["ruff==0.6.5"]
+      - id: ruff-check
+        name: ruff check
+        entry: ruff
+        language: python
+        types: [python]
+        args: ["check", "--select=E,F,W,C,B", "."]
+        additional_dependencies: ["ruff==0.6.5"]
+
+# This configuration runs ruff inside pre-commit-managed virtualenvs so no
+# system-level `ruff` installation is required. The hooks are pinned to the
+# same version declared in requirements-dev.txt.
+# To enable locally:
+# 1) Install dev requirements (which include pre-commit):
+#    pip install -r requirements-dev.txt
+# 2) Install the git hooks once:
+#    pre-commit install
+# 3) (Optional) Run hooks against all files:
+#    pre-commit run --all-files
