@@ -149,9 +149,27 @@ def delete_plan(plan_id):
         return jsonify({"error": "Plan not found"}), 404
     participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
     if not participant:
-        return jsonify({"error: You are not a participant of this plan"}), 403
-    # Remove user_id from participant or delete participant
+        return jsonify({"error": "You do not have permission to delete this plan"}), 403
+    # Remove user_id from participant to mark as left
     participant.user_id = None
+    # If user is owner, set next participant as owner
+    if participant.role == "owner":
+        next_participant = (
+            PlanParticipant.query.filter_by(plan_id=plan.id)
+            .filter(PlanParticipant.user_id.isnot(None))
+            .first()
+        )
+        if next_participant:
+            participant.role = "member"
+            next_participant.role = "owner"
+        else:
+            # No participants left, delete the plan
+            ExpenseShare.query.filter(
+                ExpenseShare.expense_id.in_(db.session.query(Expense.id).filter_by(plan_id=plan.id))
+            ).delete(synchronize_session=False)
+            Expense.query.filter_by(plan_id=plan.id).delete(synchronize_session=False)
+            PlanParticipant.query.filter_by(plan_id=plan.id).delete(synchronize_session=False)
+            db.session.delete(plan)
     db.session.commit()
     return jsonify({"message": f"You left plan {plan.name}."}), 200
 
