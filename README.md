@@ -293,7 +293,7 @@ Example `pyproject.toml` snippet (already in the project):
 [tool.ruff]
 line-length = 100
 select = ["E", "F", "W", "C", "B"]
-ignore = ["E203", "W503"]
+ignore = ["E203"]
 exclude = ["migrations", "instance", "docs", ".venv", "backend/static"]
 ```
 
