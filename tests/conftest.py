@@ -2,8 +2,11 @@ import os
 import sys
 import tempfile
 import pytest
-from backend.app import create_app
-from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
+
+# Do not import `backend` at module import time — some environments (pre-commit,
+# linters, or CI) run static checks before the application environment is ready.
+# Import backend modules lazily inside fixtures/factories to avoid import-time
+# side effects and make the file safe for static analysis tools.
 
 # Ensure project root is on sys.path so `backend` package can be imported
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -18,6 +21,10 @@ def app():
     os.close(db_fd)
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
     os.environ["FLASK_ENV"] = "testing"
+    # Import app factory and db lazily to avoid import-time side effects
+    from backend.app import create_app
+    from backend.models import db
+
     test_app = create_app()
     with test_app.app_context():
         db.create_all()
@@ -45,6 +52,9 @@ def user_factory(app):
     def _create(username="user", email=None, password="pass"):
         if email is None:
             email = f"{username}@test.local"
+        # Import models lazily
+        from backend.models import db, User
+
         u = User(username=username, email=email)
         u.set_password(password)
         db.session.add(u)
@@ -62,6 +72,8 @@ def plan_factory(app, user_factory):
             owner = user_factory("owner")
         if participants is None:
             participants = ["Alice", "Bob"]
+        from backend.models import db, Plan, PlanParticipant
+
         plan = Plan(name=name, hash_id="TESTHASH", created_by=owner.id)
         db.session.add(plan)
         db.session.flush()
@@ -84,6 +96,8 @@ def expense_factory(app, plan_factory):
             plan = plan_factory()
         if shares is None:
             shares = {"Alice": 30.0, "Bob": 30.0}
+        from backend.models import db, Expense, ExpenseShare
+
         expense = Expense(
             description=description,
             amount=amount,
