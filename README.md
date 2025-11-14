@@ -321,8 +321,8 @@ jobs:
 					python -m pip install --upgrade pip
 					pip install -r requirements.txt
 					pip install -r requirements-dev.txt
-					- name: Lint (ruff)
-						run: ruff check .
+			- name: Lint (ruff)
+				run: ruff check .
 			- name: Tests (pytest)
 				run: pytest -q
 ```
