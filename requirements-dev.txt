@@ -2,3 +2,4 @@ ruff==0.6.5
 pytest==8.3.2
 coverage==7.6.0
 Flask-Testing==0.8.1
+pre-commit

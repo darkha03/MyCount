@@ -1,8 +1,9 @@
 name: CI / CD
 
 on:
-  push:
-    branches: [ main ]
+  # Run CI on pushes to any branch (useful for feature branches). If you want to
+  # limit to specific branches, replace the empty object with `branches: [ main, dev ]`.
+  push: {}
   pull_request:
     branches: [ main ]
 
@@ -26,7 +27,7 @@ jobs:
 
       - name: Lint (ruff)
         run: |
-          if command -v ruff >/dev/null 2>&1; then ruff --version && ruff check . || true; else echo "ruff not installed, skipping"; fi
+          if command -v ruff >/dev/null 2>&1; then ruff --version && ruff check .; else echo "ruff not installed, skipping"; fi
 
       - name: App import smoke test
         env:

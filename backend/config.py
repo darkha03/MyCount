@@ -12,7 +12,9 @@ class Config:
 
     # Resolve a single absolute DB path under the project root's `instance/` folder
     # This avoids differences when running from different working directories
-    BASE_DIR = Path(__file__).resolve().parent.parent  # project root (folder that contains `backend/`)
+    BASE_DIR = (
+        Path(__file__).resolve().parent.parent
+    )  # project root (folder that contains `backend/`)
     DEFAULT_DB_PATH = BASE_DIR / "instance" / "mycount.db"
 
     # Normalize DATABASE_URL for SQLAlchemy and prefer appropriate drivers

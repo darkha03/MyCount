@@ -4,16 +4,19 @@ from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShar
 import secrets
 from datetime import datetime
 
+
 def generate_hash_id(length=8):
     return secrets.token_urlsafe(length)[:length]
+
 
 plans_bp = Blueprint(
     "plans",
     __name__,
     template_folder="templates",
     static_folder="static",
-    url_prefix="/plans"  
+    url_prefix="/plans",
 )
+
 
 # Routes for plans management
 @plans_bp.route("/", methods=["GET"])
@@ -21,7 +24,8 @@ plans_bp = Blueprint(
 def get_plans():
     return render_template("plans/dashboard.html")
 
-#Get all the plans for the logged in user
+
+# Get all the plans for the logged in user
 @plans_bp.route("/api/plans", methods=["GET"])
 @login_required
 def get_plans_api():
@@ -36,17 +40,22 @@ def get_plans_api():
         if plan:
             participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
             expenses = Expense.query.filter_by(plan_id=plan.id).all()
-            user_plans.append({
-                "id": plan.id,
-                "name": plan.name,
-                "hash_id": plan.hash_id,
-                "created_at": plan.created_at.isoformat(),
-                "participants": [p.name for p in participant],
-                "total_expenses": sum(e.amount for e in expenses if e.description != "Reimbursement")
-            })
+            user_plans.append(
+                {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "hash_id": plan.hash_id,
+                    "created_at": plan.created_at.isoformat(),
+                    "participants": [p.name for p in participant],
+                    "total_expenses": sum(
+                        e.amount for e in expenses if e.description != "Reimbursement"
+                    ),
+                }
+            )
     return jsonify(user_plans)
 
-#Add a new plan
+
+# Add a new plan
 @plans_bp.route("/api/plans", methods=["POST"])
 @login_required
 def add_plan():
@@ -57,23 +66,31 @@ def add_plan():
 
     data = request.get_json()
     hash_id = generate_hash_id()
-    participants = data.get("participants", []) # List of participant usernames
+    participants = data.get("participants", [])  # List of participant usernames
     # Create new plan
     plan = Plan(name=data["name"], hash_id=hash_id, created_by=user.id)
     db.session.add(plan)
     db.session.flush()  # assign plan.id without committing
 
     # Add creator as participant
-    participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="owner", name=participants[0] if participants else username)
+    participant = PlanParticipant(
+        user_id=user.id,
+        plan_id=plan.id,
+        role="owner",
+        name=participants[0] if participants else username,
+    )
     db.session.add(participant)
     # Add other participants
     for participant_name in participants[1:]:
-        participant = PlanParticipant(user_id=None, plan_id=plan.id, role="member", name=participant_name)
+        participant = PlanParticipant(
+            user_id=None, plan_id=plan.id, role="member", name=participant_name
+        )
         db.session.add(participant)
     # Commit everything at once
     db.session.commit()
 
     return jsonify({"name": plan.name, "hash_id": plan.hash_id}), 201
+
 
 # Get a specific plan
 @plans_bp.route("/api/plans/<plan_id>", methods=["GET"])
@@ -94,9 +111,10 @@ def get_plan(plan_id):
         "name": plan.name,
         "hash_id": plan.hash_id,
         "created_at": plan.created_at.isoformat(),
-        "participants": [p.name for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()]
+        "participants": [p.name for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()],
     }
     return jsonify(plan_data), 200
+
 
 # Modify a plan
 @plans_bp.route("/api/plans/<plan_id>", methods=["PUT"])
@@ -117,6 +135,7 @@ def modify_plan(plan_id):
     db.session.commit()
     return jsonify({"message": f"Plan {plan.name} updated."}), 200
 
+
 # Delete a plan (leave the plan)
 @plans_bp.route("/api/plans/<plan_id>", methods=["DELETE"])
 @login_required
@@ -136,6 +155,7 @@ def delete_plan(plan_id):
     db.session.commit()
     return jsonify({"message": f"You left plan {plan.name}."}), 200
 
+
 # Join an existing plan
 @plans_bp.route("/api/plans/<plan_id>/join", methods=["GET", "POST"])
 @login_required
@@ -154,19 +174,27 @@ def join_plan(plan_id):
         participants_list = [{"name": p.name, "id": p.user_id} for p in existing_participants]
         return jsonify(participants_list), 200
     elif request.method == "POST":
-        existing_participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
+        existing_participant = PlanParticipant.query.filter_by(
+            plan_id=plan.id, user_id=user.id
+        ).first()
         if existing_participant:
             return jsonify({"error": "You are already a participant of this plan."}), 400
         # Add user as participant
         name = request.json.get("participant_name", username)
-        update_participant = PlanParticipant.query.filter_by(plan_id=plan.id, name=name, user_id=None).first()
+        update_participant = PlanParticipant.query.filter_by(
+            plan_id=plan.id, name=name, user_id=None
+        ).first()
         if update_participant:
             update_participant.user_id = user.id
         else:
-            new_participant = PlanParticipant(user_id=user.id, plan_id=plan.id, role="member", name=name)
+            new_participant = PlanParticipant(
+                user_id=user.id, plan_id=plan.id, role="member", name=name
+            )
             db.session.add(new_participant)
         db.session.commit()
         return jsonify({"message": f"You have joined the plan '{plan.name}'."}), 200
+
+
 # Route to view a specific plan
 @plans_bp.route("/<hash_id>", methods=["GET"])
 @login_required
@@ -179,6 +207,7 @@ def view_plan(hash_id):
         if plan.plan.hash_id == hash_id:
             return render_template("plans/view_plan.html", plan=plan.plan)
     return jsonify({"error": "Plan not found"}), 404
+
 
 @plans_bp.route("/api/plans/<hash_id>/expenses", methods=["GET"])
 @login_required
@@ -193,16 +222,19 @@ def get_plan_expenses_api(hash_id):
             expenses_list = []
             for expense in plan_expenses:
                 participant = ExpenseShare.query.filter_by(expense_id=expense.id).all()
-                expenses_list.append({
-                    "id": expense.id,
-                    "name": expense.description,
-                    "amount": expense.amount,
-                    "payer": expense.payer_name,
-                    "participants": [p.name for p in participant],
-                    "amount_details": {p.name: p.amount for p in participant}
-                })
+                expenses_list.append(
+                    {
+                        "id": expense.id,
+                        "name": expense.description,
+                        "amount": expense.amount,
+                        "payer": expense.payer_name,
+                        "participants": [p.name for p in participant],
+                        "amount_details": {p.name: p.amount for p in participant},
+                    }
+                )
             return jsonify(expenses_list)
     return jsonify({"error": "Plan not found"}), 404
+
 
 # Render expenses page
 @plans_bp.route("/<hash_id>/section/expenses", methods=["GET"])
@@ -216,21 +248,29 @@ def get_plan_expenses(hash_id):
             plan_expenses = Expense.query.filter_by(plan_id=plan.plan.id).all()
             expenses_by_date = {}
             for expense in plan_expenses:
-                date_str = expense.date.strftime('%d/%m/%Y')
+                date_str = expense.date.strftime("%d/%m/%Y")
                 if date_str not in expenses_by_date:
                     expenses_by_date[date_str] = []
-                expenses_by_date[date_str].append({
-                    "id": expense.id,
-                    "name": expense.description,
-                    "amount": expense.amount,
-                    "payer": expense.payer_name,
-                })
+                expenses_by_date[date_str].append(
+                    {
+                        "id": expense.id,
+                        "name": expense.description,
+                        "amount": expense.amount,
+                        "payer": expense.payer_name,
+                    }
+                )
             participant = PlanParticipant.query.filter_by(plan_id=plan.plan.id).all()
             participant_names = [p.name for p in participant]
             sorted_dates = sorted(expenses_by_date.keys(), reverse=True)
-            return render_template("plans/expenses.html", expenses_by_date=expenses_by_date,
-                sorted_dates=sorted_dates, plan=plan.plan, participants=participant_names)
+            return render_template(
+                "plans/expenses.html",
+                expenses_by_date=expenses_by_date,
+                sorted_dates=sorted_dates,
+                plan=plan.plan,
+                participants=participant_names,
+            )
     return jsonify({"error": "Plan not found"}), 404
+
 
 # Add expense to a plan
 @plans_bp.route("/<hash_id>/section/expenses", methods=["POST"])
@@ -262,15 +302,14 @@ def add_plan_expense(hash_id):
             db.session.flush()  # assign new_expense.id without committing
             for participant, amount in zip(data["participants"], data["amounts"]):
                 expense_participant = ExpenseShare(
-                    expense_id=new_expense.id,
-                    name=participant,
-                    amount=amount
+                    expense_id=new_expense.id, name=participant, amount=amount
                 )
                 db.session.add(expense_participant)
             db.session.commit()
             print(f"New expense added to plan {hash_id}: {new_expense}")
-            
+
     return jsonify({"message": "Expense added"}), 201
+
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["DELETE"])
 @login_required
@@ -288,6 +327,7 @@ def delete_plan_expense(hash_id, expense_id):
             print(f"Expense {expense_id} deleted from plan {hash_id}")
             return jsonify({"message": "Expense deleted"}), 200
     return jsonify({"error": "Plan not found"}), 404
+
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["PUT"])
 @login_required
@@ -309,15 +349,14 @@ def update_plan_expense(hash_id, expense_id):
             ExpenseShare.query.filter_by(expense_id=expense.id).delete()
             for participant, amount in zip(data["participants"], data["amounts"]):
                 expense_participant = ExpenseShare(
-                    expense_id=expense.id,
-                    name=participant,
-                    amount=amount
+                    expense_id=expense.id, name=participant, amount=amount
                 )
                 db.session.add(expense_participant)
             db.session.commit()
             print(f"Expense {expense_id} updated in plan {hash_id}")
             return jsonify({"message": "Expense updated"}), 200
     return jsonify({"error": "Expense not found"}), 404
+
 
 @plans_bp.route("/<hash_id>/section/expenses/<int:expense_id>", methods=["GET"])
 @login_required
@@ -339,12 +378,16 @@ def get_plan_expense(hash_id, expense_id):
                     "date": expense.date.isoformat(),
                     "payer": expense.payer_name,
                     "participants": participant_names,
-                    "amounts": participant_amounts
+                    "amounts": participant_amounts,
                 }
-            return render_template("/plans/expense.html", expense=expense_data, plan=plan.plan, zip=zip)
+            return render_template(
+                "/plans/expense.html", expense=expense_data, plan=plan.plan, zip=zip
+            )
     return jsonify({"error": "Expense not found"}), 404
 
+
 # Routes for reimbursements
+
 
 def calculate_reimbursements(balances):
     creditors = []
@@ -365,11 +408,7 @@ def calculate_reimbursements(balances):
         creditor, credit = creditors[j]
 
         amount = min(debt, credit)
-        reimbursements.append({
-            "from": debtor,
-            "to": creditor,
-            "amount": round(amount, 2)
-        })
+        reimbursements.append({"from": debtor, "to": creditor, "amount": round(amount, 2)})
 
         debtors[i][1] -= amount
         creditors[j][1] -= amount
@@ -381,15 +420,20 @@ def calculate_reimbursements(balances):
 
     return reimbursements
 
+
 @plans_bp.route("/<hash_id>/section/reimbursements", methods=["GET"])
 @login_required
 def get_plan_reimbursements(hash_id):
     expenses = get_plan_expenses_api(hash_id).get_json()
     balances = calculate_balance(expenses)
     reimbursements = calculate_reimbursements(balances)
-    return render_template("plans/reimbursements.html", hash_id=hash_id, reimbursements=reimbursements)
+    return render_template(
+        "plans/reimbursements.html", hash_id=hash_id, reimbursements=reimbursements
+    )
+
 
 # Route for plan statistics
+
 
 def calculate_balance(expenses):
     balances = {}
@@ -397,8 +441,8 @@ def calculate_balance(expenses):
         payer = expense["payer"]
         amount = expense["amount"]
         participants = expense["participants"]
-        amount_details = expense['amount_details']
-        
+        amount_details = expense["amount_details"]
+
         for participant in participants:
             if participant not in balances:
                 balances[participant] = 0
@@ -412,11 +456,12 @@ def calculate_balance(expenses):
         balances[k] = round(balances[k], 2)
     return balances
 
+
 def calculate_expense(expenses):
     total_expense = {}
     for expense in expenses:
         participants = expense["participants"]
-        amount_details = expense['amount_details']
+        amount_details = expense["amount_details"]
         for participant in participants:
             if participant not in total_expense:
                 total_expense[participant] = 0
@@ -426,6 +471,7 @@ def calculate_expense(expenses):
     for k in total_expense:
         total_expense[k] = round(total_expense[k], 2)
     return total_expense
+
 
 def calculate_real_expense(expenses):
     real_expense = {}
@@ -442,10 +488,11 @@ def calculate_real_expense(expenses):
             for participant in expense["participants"]:
                 if participant not in real_expense:
                     real_expense[participant] = 0
-                real_expense[participant] -= expense['amount_details'][participant]
+                real_expense[participant] -= expense["amount_details"][participant]
     for k in real_expense:
         real_expense[k] = round(real_expense[k], 2)
     return real_expense
+
 
 @plans_bp.route("/<hash_id>/section/statistics", methods=["GET"])
 @login_required
@@ -458,4 +505,10 @@ def get_plan_statistics(hash_id):
     balances = dict(sorted(balances.items()))
     total_expense = dict(sorted(total_expense.items()))
     real_expense = dict(sorted(real_expense.items()))
-    return render_template("plans/statistics.html", hash_id=hash_id, balances=balances, total_expense=total_expense, real_expense=real_expense)
+    return render_template(
+        "plans/statistics.html",
+        hash_id=hash_id,
+        balances=balances,
+        total_expense=total_expense,
+        real_expense=real_expense,
+    )

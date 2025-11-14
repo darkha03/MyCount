@@ -19,3 +19,67 @@ h1 {
   padding: 20px;
 }
 
+.login-hero {
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+}
+
+
+.login-card {
+  max-width: 420px;
+  width: 100%;
+}
+
+.auth-sidebar {
+  background: #ffffff;
+  height: 100vh;
+  padding: 48px 36px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(0,0,0,0.04);
+}
+
+/* Center the main form area vertically */
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 50vh;
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.auth-logo img { width: 44px; height: 44px; object-fit: contain; }
+.auth-title { font-size: 2rem; font-weight: 700; margin: 0; }
+.auth-subtitle { color: #6c757d; margin-top: 8px; margin-bottom: 20px; font-size: 1.25rem; }
+
+.auth-input {
+  background: #f7f9fb;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.auth-cta {
+  background: linear-gradient(180deg,#0d6efd,#0069d9);
+  border: none;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.auth-cta:hover {
+  background: linear-gradient(180deg,#0069d9,#0d6efd);
+  cursor: pointer;
+}
+
+@media (max-width: 767.98px) {
+  .login-hero {
+    min-height: 240px;
+  }
+}
+

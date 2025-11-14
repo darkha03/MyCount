@@ -1,0 +1,10 @@
+[tool.ruff]
+# Project-wide ruff configuration
+line-length = 100
+lint.select = ["E", "F", "W", "C", "B"]
+lint.ignore = ["E203"]
+exclude = ["migrations", "instance", "docs", ".venv", "backend/static"]
+
+# Optional: tune formatting behavior
+[tool.black]
+line-length = 100

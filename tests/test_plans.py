@@ -9,7 +9,9 @@ def test_create_plan_minimal(client, user_factory):
     client.post("/login", data={"username": "owner", "password": "pw"}, follow_redirects=True)
 
     payload = {"name": "Vacation", "participants": []}
-    resp = client.post("/plans/api/plans", data=json.dumps(payload), content_type="application/json")
+    resp = client.post(
+        "/plans/api/plans", data=json.dumps(payload), content_type="application/json"
+    )
     assert resp.status_code == 201
     data = resp.get_json()
     assert data["name"] == "Vacation"

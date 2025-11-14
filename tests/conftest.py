@@ -3,13 +3,16 @@ import sys
 import tempfile
 import pytest
 
+# Do not import `backend` at module import time — some environments (pre-commit,
+# linters, or CI) run static checks before the application environment is ready.
+# Import backend modules lazily inside fixtures/factories to avoid import-time
+# side effects and make the file safe for static analysis tools.
+
 # Ensure project root is on sys.path so `backend` package can be imported
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from backend.app import create_app
-from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
 
 @pytest.fixture(scope="function")
 def app():
@@ -18,6 +21,10 @@ def app():
     os.close(db_fd)
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
     os.environ["FLASK_ENV"] = "testing"
+    # Import app factory and db lazily to avoid import-time side effects
+    from backend.app import create_app
+    from backend.models import db
+
     test_app = create_app()
     with test_app.app_context():
         db.create_all()
@@ -29,25 +36,34 @@ def app():
     except OSError:
         pass
 
+
 @pytest.fixture(scope="function")
 def client(app):
     return app.test_client()
 
+
 # Factories -------------------------------------------------
+
 
 @pytest.fixture(scope="function")
 def user_factory(app):
     created = []
+
     def _create(username="user", email=None, password="pass"):
         if email is None:
             email = f"{username}@test.local"
+        # Import models lazily
+        from backend.models import db, User
+
         u = User(username=username, email=email)
         u.set_password(password)
         db.session.add(u)
         db.session.commit()
         created.append(u)
         return u
+
     return _create
+
 
 @pytest.fixture(scope="function")
 def plan_factory(app, user_factory):
@@ -56,16 +72,22 @@ def plan_factory(app, user_factory):
             owner = user_factory("owner")
         if participants is None:
             participants = ["Alice", "Bob"]
+        from backend.models import db, Plan, PlanParticipant
+
         plan = Plan(name=name, hash_id="TESTHASH", created_by=owner.id)
         db.session.add(plan)
         db.session.flush()
         # owner as participant
-        db.session.add(PlanParticipant(user_id=owner.id, plan_id=plan.id, role="owner", name=owner.username))
+        db.session.add(
+            PlanParticipant(user_id=owner.id, plan_id=plan.id, role="owner", name=owner.username)
+        )
         for p in participants:
             db.session.add(PlanParticipant(user_id=None, plan_id=plan.id, role="member", name=p))
         db.session.commit()
         return plan
+
     return _create
+
 
 @pytest.fixture(scope="function")
 def expense_factory(app, plan_factory):
@@ -74,11 +96,19 @@ def expense_factory(app, plan_factory):
             plan = plan_factory()
         if shares is None:
             shares = {"Alice": 30.0, "Bob": 30.0}
-        expense = Expense(description=description, amount=amount, payer_name=payer_name, plan_id=plan.id)
+        from backend.models import db, Expense, ExpenseShare
+
+        expense = Expense(
+            description=description,
+            amount=amount,
+            payer_name=payer_name,
+            plan_id=plan.id,
+        )
         db.session.add(expense)
         db.session.flush()
         for name, share_amount in shares.items():
             db.session.add(ExpenseShare(expense_id=expense.id, name=name, amount=share_amount))
         db.session.commit()
         return expense
+
     return _create
