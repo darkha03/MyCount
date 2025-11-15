@@ -35,7 +35,6 @@ def get_plans_api():
         return jsonify({"error": "User not found"}), 404
     user_plans = []
     for participation in user.participations:
-        # Use SQLAlchemy 2.0 style session.get to avoid LegacyAPIWarning
         plan = db.session.get(Plan, participation.plan_id)
         if plan:
             participant = PlanParticipant.query.filter_by(plan_id=plan.id).all()
@@ -106,12 +105,17 @@ def get_plan(plan_id):
     participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
     if not participant:
         return jsonify({"error": "You are not a participant of this plan"}), 403
+    participants = []
+    for p in PlanParticipant.query.filter_by(plan_id=plan.id).all():
+        participants.append({"id": p.id, "name": p.name, "user_id": p.user_id, "role": p.role})
+
     plan_data = {
         "id": plan.id,
         "name": plan.name,
         "hash_id": plan.hash_id,
         "created_at": plan.created_at.isoformat(),
-        "participants": [p.name for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()],
+        "participants": participants,
+        "current_user_id": user.id,
     }
     return jsonify(plan_data), 200
 
@@ -128,10 +132,41 @@ def modify_plan(plan_id):
     if not plan:
         return jsonify({"error": "Plan not found"}), 404
     participant = PlanParticipant.query.filter_by(plan_id=plan.id, user_id=user.id).first()
-    if not participant or participant.role != "owner":
-        return jsonify({"error": "You are not the owner of this plan"}), 403
+    if not participant:
+        return jsonify({"error": "You are not a participant of this plan"}), 403
     data = request.get_json()
     plan.name = data.get("name", plan.name)
+
+    # If participants list provided, apply updates. Expected format:
+    # participants: [{"id": <pp_id>, "name": "Name",
+    # "user_id": <user_id or null>, "role": "member"}, ...]
+    participants_data = data.get("participants")
+    if participants_data is not None:
+        # Build a map of existing participants by id for validation
+        existing = {p.id: p for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()}
+        processed_ids = set()
+        for item in participants_data:
+            pp_id = item.get("id")
+            if pp_id and pp_id in existing:
+                pp = existing[pp_id]
+                # Update name and user_id and role if provided
+                pp.name = item.get("name", pp.name)
+                # Only update user_id if explicitly provided (allow null to unassign)
+                if "user_id" in item:
+                    pp.user_id = item.get("user_id")
+                if "role" in item:
+                    pp.role = item.get("role")
+                processed_ids.add(pp_id)
+            else:
+                # New participant (no id) -> create
+                new_pp = PlanParticipant(
+                    user_id=item.get("user_id"),
+                    plan_id=plan.id,
+                    role=item.get("role", "member"),
+                    name=item.get("name", ""),
+                )
+                db.session.add(new_pp)
+
     db.session.commit()
     return jsonify({"message": f"Plan {plan.name} updated."}), 200
 

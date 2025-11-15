@@ -136,8 +136,6 @@ function initExpensesForm(planId, options = {}) {
       const changedInput = e.target;
       const changedIndex = amountInputs.indexOf(changedInput);
 
-      let sumOthers = 0;
-
       let remaining = total - (parseFloat(changedInput.value) || 0);
 
       amountInputs.forEach((input, idx) => {
@@ -349,7 +347,7 @@ function renderStatisticChart() {
       }]
     },
     options: {
-      reponsive: true,
+      responsive: true,
       plugins: {
         title: {
           display: true,

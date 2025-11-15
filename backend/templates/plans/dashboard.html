@@ -9,6 +9,22 @@
   <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addPlanModal">Create New Plan</button>
   <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#joinPlanModal">Join Existing Plan</button>
   </div>
+  <style>
+  /* Ensure action buttons/badges share the same width and fill the action container */
+  .action-div {
+    display: inline-block;
+    min-width: 60px;
+    vertical-align: middle;
+  }
+  .action-div > * {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+  </style>
   <div id="plan-list" class="row row-cols-1 row-cols-md-2 g-4"></div>
   <!-- Modal for adding new plan -->
   <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
@@ -137,6 +153,52 @@
     const copyPlanHashBtn = document.getElementById('copy-plan-hash-btn');
     const copyFeedback = document.getElementById('copy-feedback');
     let currentModifyPlanId = null;
+    let currentModifyPlanCurrentUserId = null;
+
+    function refreshYouIndicators() {
+      const rows = Array.from(modifyParticipantsList.querySelectorAll('.participant-row'));
+      let yourRow = null;
+      rows.forEach(r => {
+        const inp = r.querySelector('input');
+        const action = r.querySelector('.action-div');
+        if (!action) return;
+        action.innerHTML = '';
+        const userId = inp.dataset.userId || '';
+        if (String(userId) === String(currentModifyPlanCurrentUserId) && currentModifyPlanCurrentUserId) {
+          const badge = document.createElement('button');
+          badge.type = 'button';
+          badge.className = 'btn btn-sm btn-success';
+          badge.textContent = 'You';
+          badge.disabled = true;
+          action.appendChild(badge);
+          yourRow = r;
+        } else {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-secondary set-to-me-btn';
+          btn.textContent = 'Swap';
+          if ( inp.dataset.userId.length !== 0 ){
+            btn.disabled = true;
+          } else {
+            btn.disabled = false;
+          }
+          btn.onclick = () => {
+            if (inp.dataset.role === 'owner') {
+              if (!confirm('This participant is the owner. Assigning yourself will transfer ownership. Continue?')) return;
+            }
+            inp.dataset.userId = currentModifyPlanCurrentUserId ? String(currentModifyPlanCurrentUserId) : '';
+            inp.dataset.role = yourRow ? yourRow.querySelector('input').dataset.role : 'member';
+            const oldUserId = yourRow ? (yourRow.querySelector('input').dataset.userId || '') : '';
+            if (yourRow) {
+              yourRow.querySelector('input').dataset.userId ="";
+              yourRow.querySelector('input').dataset.role ="member";
+            }
+            refreshYouIndicators();
+          };
+          action.appendChild(btn);
+        }
+      });
+    }
     const resetJoinBtn = document.getElementById("reset-join-btn");
     if (resetJoinBtn) {
       resetJoinBtn.onclick = function() {
@@ -171,7 +233,7 @@
                 <p class="card-text">Total Expenses: $${plan.total_expenses ? plan.total_expenses.toFixed(2) : '0.00'}</p>
                 <div class="d-flex justify-content-end gap-2">
                   <a href="/plans/${plan.hash_id}" class="btn btn-primary">View Plan</a>
-                  <button class="btn btn-sm btn-outline-primary modify-plan-btn" data-id="${plan.hash_id}">Modify</button>
+                <button class="btn btn-sm btn-outline-primary modify-plan-btn" data-id="${plan.hash_id}">Modify</button>
                   <button class="btn btn-sm btn-outline-primary share-plan-btn" data-id="${plan.hash_id}">Share</button>
                   <button class="btn btn-danger btn-sm delete-plan-btn" data-id="${plan.hash_id}">Delete</button>
                 </div>
@@ -201,20 +263,36 @@
         btn.onclick = function(e) {
           e.stopPropagation();
           currentModifyPlanId = btn.getAttribute("data-id");
-          // Fetch plan details
           fetch(`/plans/api/plans/${currentModifyPlanId}`)
             .then(res => res.json())
             .then(plan => {
               modifyPlanNameInput.value = plan.name;
               modifyParticipantsList.innerHTML = "";
-              plan.participants.forEach((name, idx) => {
-                const input = document.createElement("input");
-                input.type = "text";
-                input.className = "form-control mb-2 participant-input";
-                input.value = name;
+              // plan.participants is an array of objects: {id, name, user_id, role}
+              plan.participants.forEach((p, idx) => {
+                const row = document.createElement('div');
+                row.className = 'd-flex gap-2 align-items-center mb-2 participant-row';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control participant-input';
+                input.value = p.name || '';
                 input.placeholder = `Participant ${idx + 1}`;
-                modifyParticipantsList.appendChild(input);
+                input.dataset.ppId = p.id || '';
+                input.dataset.userId = p.user_id === null ? '' : String(p.user_id);
+                input.dataset.role = p.role || 'member';
+
+                const actionDiv = document.createElement('div');
+                actionDiv.className = 'd-flex align-items-center action-div';
+
+                row.appendChild(input);
+                row.appendChild(actionDiv);
+                modifyParticipantsList.appendChild(row);
               });
+
+              // store current user's id for use by Set-to-me buttons
+              currentModifyPlanCurrentUserId = plan.current_user_id;
+              refreshYouIndicators();
               const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modifyPlanModal'));
               modal.show();
             });
@@ -222,12 +300,22 @@
       });
     }
     addModifyParticipantBtn.onclick = () => {
-      const count = modifyParticipantsList.querySelectorAll('.participant-input').length + 1;
+      const count = modifyParticipantsList.querySelectorAll('.participant-row').length + 1;
+      const row = document.createElement('div');
+      row.className = 'd-flex gap-2 align-items-center mb-2 participant-row';
       const input = document.createElement("input");
       input.type = "text";
-      input.className = "form-control mb-2 participant-input";
+      input.className = "form-control participant-input";
       input.placeholder = `Participant ${count}`;
-      modifyParticipantsList.appendChild(input);
+      input.dataset.ppId = '';
+      input.dataset.userId = '';
+      input.dataset.role = 'member';
+      const actionDiv = document.createElement('div');
+      actionDiv.className = 'd-flex align-items-center action-div';
+      row.appendChild(input);
+      row.appendChild(actionDiv);
+      modifyParticipantsList.appendChild(row);
+      refreshYouIndicators();
     };
 
     function attachShareHandlers() {
@@ -305,7 +393,9 @@
     addform.onsubmit = e => {
       e.preventDefault();
       const planName = input.value;
-      const participantInputs = document.querySelectorAll(".participant-input");
+      // Only gather participant inputs from the Add Plan modal (avoid pulling
+      // inputs from the Modify modal which also uses the same .participant-input class)
+      const participantInputs = participantsList.querySelectorAll(".participant-input");
       const participants = Array.from(participantInputs).map(p => p.value.trim()).filter(Boolean);
 
       fetch("/plans/api/plans", {
@@ -314,12 +404,20 @@
         body: JSON.stringify({ name: planName, participants })
       }).then(() => {
         input.value = "";
-        participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1">';
+        participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1 (You)">';
         const modal = bootstrap.Modal.getInstance(document.getElementById('addPlanModal'));
         modal.hide();
         loadPlans();
       });
     };
+
+    // Reset Add Plan modal inputs when it is hidden so stale values don't leak
+    // into future create operations.
+    const addModalEl = document.getElementById('addPlanModal');
+    addModalEl.addEventListener('hidden.bs.modal', () => {
+      input.value = '';
+      participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1 (You)">';
+    });
 
     joinBtn.onclick = e => {
       joinBtnHandler(e);
@@ -343,19 +441,36 @@
     modifyForm.onsubmit = e => {
       e.preventDefault();
       const planName = modifyPlanNameInput.value;
-      const participantInputs = modifyParticipantsList.querySelectorAll(".participant-input");
-      const participants = Array.from(participantInputs).map(p => p.value.trim()).filter(Boolean);
+      const rows = Array.from(modifyParticipantsList.querySelectorAll('.participant-row'));
+      const participants = rows.map(r => {
+        const inp = r.querySelector('input');
+        const ppId = inp.dataset.ppId || '';
+        const userId = inp.dataset.userId ? Number(inp.dataset.userId) : null;
+        const role = inp.dataset.role || 'member';
+        return { id: ppId ? Number(ppId) : undefined, name: inp.value.trim(), user_id: userId, role };
+      }).filter(p => p.name);
+
+      const payload = { name: planName, participants: participants };
 
       fetch(`/plans/api/plans/${currentModifyPlanId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: planName, participants })
+        body: JSON.stringify(payload)
       }).then(() => {
         const modal = bootstrap.Modal.getInstance(document.getElementById('modifyPlanModal'));
         modal.hide();
         loadPlans();
       });
     };
+    // Clear Modify Plan modal when hidden to avoid leaving stale participant
+    // inputs in the DOM which could be picked up elsewhere.
+    const modifyModalEl = document.getElementById('modifyPlanModal');
+    modifyModalEl.addEventListener('hidden.bs.modal', () => {
+      modifyParticipantsList.innerHTML = '';
+      modifyPlanNameInput.value = '';
+      currentModifyPlanId = null;
+      currentModifyPlanCurrentUserId = null;
+    });
     loadPlans();
   });
   </script>
