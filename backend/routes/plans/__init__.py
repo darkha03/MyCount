@@ -240,10 +240,7 @@ def join_plan(plan_id):
         if update_participant:
             update_participant.user_id = user.id
         else:
-            new_participant = PlanParticipant(
-                user_id=user.id, plan_id=plan.id, role="member", name=name
-            )
-            db.session.add(new_participant)
+            return jsonify({"error": "No available slot with that name to join."}), 400
         db.session.commit()
         return jsonify({"message": f"You have joined the plan '{plan.name}'."}), 200
 
