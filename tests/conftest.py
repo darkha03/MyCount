@@ -67,7 +67,7 @@ def plan_factory(app, user_factory):
             PlanParticipant(user_id=owner.id, plan_id=plan.id, role="owner", name=owner.username)
         )
         for p in participants:
-            if type(p) is str:
+            if isinstance(p, str):
                 db.session.add(
                     PlanParticipant(user_id=None, plan_id=plan.id, role="member", name=p)
                 )
