@@ -1,4 +1,4 @@
-from backend.models import PlanParticipant
+from backend.models import PlanParticipant, Plan, db
 
 
 def test_modify_plan_updates_participants_and_name(client, user_factory, plan_factory):
@@ -60,3 +60,8 @@ def test_modify_plan_updates_participants_and_name(client, user_factory, plan_fa
     # Verify new participant Charlie exists and is assigned to `other`
     charlie = PlanParticipant.query.filter_by(plan_id=plan.id, name="Charlie", user_id=None).first()
     assert charlie is not None
+    assert charlie.role == "member"
+
+    # Verify plan name updated
+    updated_plan = db.session.get(Plan, plan.id)
+    assert updated_plan.name == "Trip 2025"
