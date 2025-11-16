@@ -285,11 +285,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   copyPlanHashBtn.onclick = function() {
-    sharePlanHashInput.select();
-    sharePlanHashInput.setSelectionRange(0, 99999); // For mobile
-    document.execCommand("copy");
-    copyFeedback.style.display = "block";
-    setTimeout(() => { copyFeedback.style.display = "none"; }, 1500);
+    navigator.clipboard.writeText(sharePlanHashInput.value)
+      .then(() => {
+        copyFeedback.style.display = "block";
+        setTimeout(() => { copyFeedback.style.display = "none"; }, 1500);
+      })
+      .catch(() => {
+        // Optionally, show an error message or fallback
+        copyFeedback.style.display = "none";
+        alert("Failed to copy to clipboard. Please copy manually.");
+      });
   };
 
   function joinBtnHandler(e) {
