@@ -18,6 +18,49 @@ from pathlib import Path
 migrate = Migrate()
 
 
+@login_required
+def index():
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    user_plans = []
+    user_reimbursements = []
+    for participation in user.participations:
+        plan = Plan.query.filter_by(id=participation.plan_id).first()
+        if not plan:
+            continue
+        participant_rows = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+        expenses_rows = Expense.query.filter_by(plan_id=plan.id).all()
+        user_plans.append(
+            {
+                "id": plan.id,
+                "name": plan.name,
+                "hash_id": plan.hash_id,
+                "created_at": plan.created_at.isoformat(),
+                "participants": [p.name for p in participant_rows],
+                "total_expenses": sum(
+                    e.amount for e in expenses_rows if e.description != "Reimbursement"
+                ),
+            }
+        )
+        # Calculate reimbursements for this plan
+        expenses_json = get_plan_expenses_api(participation.plan.hash_id).get_json()
+        balances = calculate_balance(expenses_json)
+        reimbursements = calculate_reimbursements(balances)
+        for r in reimbursements:
+            r["plan_hash_id"] = participation.plan.hash_id
+            if r["from"] == participation.name:
+                r["from"] = f"You ({r['from']})"
+                user_reimbursements.append(r)
+            elif r["to"] == participation.name:
+                r["to"] = f"You ({r['to']})"
+                user_reimbursements.append(r)
+    # Limit after collecting all plans
+    user_plans = sorted(user_plans, key=lambda p: p["created_at"], reverse=True)[:4]
+    return render_template("index.html", plans=user_plans, reimbursments=user_reimbursements)
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object("backend.config.Config")
@@ -32,54 +75,46 @@ def create_app():
         if app.debug or os.environ.get("PRINT_DB_URL"):
             print(f"DB URL: {db.engine.url}")
     migrate.init_app(app, db)
-    # Use configured SECRET_KEY (already set in Config)
     app.secret_key = app.config["SECRET_KEY"]
     CORS(app)
     app.register_blueprint(plans_bp)
     app.register_blueprint(auth_bp)
 
-    @app.route("/")
-    @login_required
-    def index():
-        username = session.get("username")
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-        user_plans = []
-        user_reimbursements = []
-        for participation in user.participations:
-            plan = Plan.query.filter_by(id=participation.plan_id).first()
-            if not plan:
-                continue
-            participant_rows = PlanParticipant.query.filter_by(plan_id=plan.id).all()
-            expenses_rows = Expense.query.filter_by(plan_id=plan.id).all()
-            user_plans.append(
-                {
-                    "id": plan.id,
-                    "name": plan.name,
-                    "hash_id": plan.hash_id,
-                    "created_at": plan.created_at.isoformat(),
-                    "participants": [p.name for p in participant_rows],
-                    "total_expenses": sum(
-                        e.amount for e in expenses_rows if e.description != "Reimbursement"
-                    ),
-                }
-            )
-            # Calculate reimbursements for this plan
-            expenses_json = get_plan_expenses_api(participation.plan.hash_id).get_json()
-            balances = calculate_balance(expenses_json)
-            reimbursements = calculate_reimbursements(balances)
-            for r in reimbursements:
-                r["plan_hash_id"] = participation.plan.hash_id
-                if r["from"] == participation.name:
-                    r["from"] = f"You ({r['from']})"
-                    user_reimbursements.append(r)
-                elif r["to"] == participation.name:
-                    r["to"] = f"You ({r['to']})"
-                    user_reimbursements.append(r)
-        # Limit after collecting all plans
-        user_plans = sorted(user_plans, key=lambda p: p["created_at"], reverse=True)[:4]
-        return render_template("index.html", plans=user_plans, reimbursments=user_reimbursements)
+    @app.after_request
+    def _apply_csp(response):
+        # Build Content-Security-Policy from config lists. These defaults allow
+        # popular CDNs (jsdelivr, cdnjs, unpkg). For production, tighten or
+        # override in `backend.config.Config`.
+        cfg = app.config
+
+        def join_list(key, default):
+            vals = cfg.get(key, default) or default
+            # allow specifying comma-separated string in env if desired
+            if isinstance(vals, str):
+                vals = [v.strip() for v in vals.split(",") if v.strip()]
+            return " ".join(vals)
+
+        default_src = join_list("CSP_DEFAULT_SRC", ["'self'"])
+        script_src = join_list("CSP_SCRIPT_SRC", ["'self'"])
+        style_src = join_list("CSP_STYLE_SRC", ["'self'"])
+        img_src = join_list("CSP_IMG_SRC", ["'self'", "data:"])
+        font_src = join_list("CSP_FONT_SRC", ["'self'", "data:"])
+        connect_src = join_list("CSP_CONNECT_SRC", ["'self'"])
+
+        policy = (
+            f"default-src {default_src}; "
+            f"script-src {script_src}; "
+            f"style-src {style_src}; "
+            f"font-src {font_src}; "
+            f"img-src {img_src}; "
+            f"connect-src {connect_src}; "
+            "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        )
+        response.headers["Content-Security-Policy"] = policy
+        return response
+
+    # Register top-level views
+    app.add_url_rule("/", "index", index)
 
     return app
 

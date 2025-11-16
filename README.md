@@ -133,7 +133,7 @@ Roadmap
 -------
 
 - Proper user registration and password reset
-- Invite flows and role-based permissions per plan
+- Role-based permissions per plan
 - Export/Import (CSV)
 - Test suite and CI
 

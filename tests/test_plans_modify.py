@@ -35,7 +35,7 @@ def test_modify_plan_updates_participants_and_name(client, user_factory, plan_fa
                 {"id": p["id"], "name": p["name"], "user_id": None, "role": "member"}
             )
 
-    # Add a new participant slot assigned to `other`
+    # Add a new participant slot assigned to no user
     payload_participants.append({"name": "Charlie", "role": "member"})
 
     payload = {"name": "Trip 2025", "participants": payload_participants}
@@ -57,7 +57,7 @@ def test_modify_plan_updates_participants_and_name(client, user_factory, plan_fa
     renamed = PlanParticipant.query.filter_by(plan_id=plan.id, name="Bobby").first()
     assert renamed is not None
 
-    # Verify new participant Charlie exists and is assigned to `other`
+    # Verify new participant Charlie exists and is assigned to no user
     charlie = PlanParticipant.query.filter_by(plan_id=plan.id, name="Charlie", user_id=None).first()
     assert charlie is not None
     assert charlie.role == "member"

@@ -1,6 +1,22 @@
 let expenseListenerAttached = false;
 let expenseDeleteListenerAttached = false;
 
+function setContentFromHtml(container, html) {
+  if (!container) return;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    // Move parsed children into the container
+    container.replaceChildren(...Array.from(doc.body.childNodes));
+  } catch (e) {
+    // Fallback: clear and insert as text to avoid executing HTML
+    while (container.firstChild) container.removeChild(container.firstChild);
+    const txt = document.createElement('div');
+    txt.textContent = html;
+    container.appendChild(txt);
+  }
+}
+
 function initExpenseDeleteListener(planId) {
   const planContent = document.getElementById("plan-content");
   if (!planContent) return;
@@ -56,7 +72,7 @@ function loadExpenseDetails(planId, expenseId) {
   fetch(`/plans/${planId}/section/expenses/${expenseId}`)
     .then(res => res.text())
     .then(html => {
-      planContent.innerHTML = html;
+      setContentFromHtml(planContent, html);
       initExpenseDeleteListener(planId); // Reinitialize delete listener
       initExpensesForm(planId, options = {method: "PUT", url: `/plans/${planId}/section/expenses/${expenseId}`, 
             modalId:"modifyExpenseModal", onSuccess: () => loadExpenseDetails(planId, expenseId)});
@@ -193,7 +209,7 @@ function loadExpenses(planId) {
     .then(res => res.text())
     .then(html => {
       const planContent = document.getElementById("plan-content");
-      planContent.innerHTML = html;
+      setContentFromHtml(planContent, html);
       initExpenseClickListener(planId);
       initExpensesForm(planId);
     });
@@ -210,7 +226,7 @@ function loadReimbursements(planId) {
     .then(res => res.text())
     .then(html => {
       const planContent = document.getElementById("plan-content");
-      planContent.innerHTML = html;
+      setContentFromHtml(planContent, html);
     });
 }
 
@@ -251,7 +267,7 @@ function loadStatistics(planId) {
     .then(res => res.text())
     .then(html => {
       const planContent = document.getElementById("plan-content");
-      planContent.innerHTML = html;
+      setContentFromHtml(planContent, html);
       renderBalanceChart();
     });
     

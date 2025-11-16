@@ -1,6 +1,11 @@
 from flask import Blueprint, jsonify, request, render_template, session
 from backend.utils.auth import login_required
 from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
+from .helpers import (
+    validate_participant_name_list,
+    validate_participants_payload,
+    apply_participants_updates,
+)
 import secrets
 from datetime import datetime
 
@@ -66,6 +71,9 @@ def add_plan():
     data = request.get_json()
     hash_id = generate_hash_id()
     participants = data.get("participants", [])  # List of participant usernames
+    ok, msg = validate_participant_name_list(participants)
+    if not ok:
+        return jsonify({"error": msg}), 400
     # Create new plan
     plan = Plan(name=data["name"], hash_id=hash_id, created_by=user.id)
     db.session.add(plan)
@@ -142,30 +150,10 @@ def modify_plan(plan_id):
     # "user_id": <user_id or null>, "role": "member"}, ...]
     participants_data = data.get("participants")
     if participants_data is not None:
-        # Build a map of existing participants by id for validation
-        existing = {p.id: p for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()}
-        processed_ids = set()
-        for item in participants_data:
-            pp_id = item.get("id")
-            if pp_id and pp_id in existing:
-                pp = existing[pp_id]
-                # Update name and user_id and role if provided
-                pp.name = item.get("name", pp.name)
-                # Only update user_id if explicitly provided (allow null to unassign)
-                if "user_id" in item:
-                    pp.user_id = item.get("user_id")
-                if "role" in item:
-                    pp.role = item.get("role")
-                processed_ids.add(pp_id)
-            else:
-                # New participant (no id) -> create
-                new_pp = PlanParticipant(
-                    user_id=item.get("user_id"),
-                    plan_id=plan.id,
-                    role=item.get("role", "member"),
-                    name=item.get("name", ""),
-                )
-                db.session.add(new_pp)
+        ok, msg = validate_participants_payload(participants_data)
+        if not ok:
+            return jsonify({"error": msg}), 400
+        apply_participants_updates(plan, participants_data)
 
     db.session.commit()
     return jsonify({"message": f"Plan {plan.name} updated."}), 200
@@ -256,6 +244,58 @@ def view_plan(hash_id):
     for plan in user.participations:
         if plan.plan.hash_id == hash_id:
             return render_template("plans/view_plan.html", plan=plan.plan)
+    return jsonify({"error": "Plan not found"}), 404
+
+
+# Export plan expenses as CSV
+@plans_bp.route("/<hash_id>/export.csv", methods=["GET"])
+@login_required
+def export_plan_csv(hash_id):
+    import csv
+    import io
+    from flask import Response
+
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    for participation in user.participations:
+        if participation.plan.hash_id == hash_id:
+            plan = participation.plan
+            # Collect expenses
+            expenses = Expense.query.filter_by(plan_id=plan.id).order_by(Expense.date).all()
+
+            output = io.StringIO()
+            writer = csv.writer(output)
+
+            # Header row
+            writer.writerow(["date", "description", "amount", "payer", "participants", "amounts"])
+
+            for exp in expenses:
+                shares = ExpenseShare.query.filter_by(expense_id=exp.id).all()
+                participant_names = [s.name for s in shares]
+                participant_amounts = [str(s.amount) for s in shares]
+                writer.writerow(
+                    [
+                        exp.date.isoformat(),
+                        exp.description,
+                        f"{exp.amount:.2f}",
+                        exp.payer_name,
+                        ",".join(participant_names),
+                        ",".join(participant_amounts),
+                    ]
+                )
+
+            csv_content = output.getvalue()
+            output.close()
+
+            headers = {
+                "Content-Type": "text/csv; charset=utf-8",
+                "Content-Disposition": f"attachment; filename=plan_{plan.hash_id}.csv",
+            }
+            return Response(csv_content, headers=headers)
+
     return jsonify({"error": "Plan not found"}), 404
 
 
