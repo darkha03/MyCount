@@ -47,6 +47,7 @@
               <div id="participants-list">
                 <input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1 (You)">
               </div>
+              <div id="add-plan-error" class="mt-2"></div>
               <button type="button" id="add-participant-btn" class="btn btn-sm btn-outline-primary">+ Add Participant</button>
             </div>
           </div>
@@ -102,6 +103,7 @@
             <div class="mb-2">
               <label class="form-label">Participants</label>
               <div id="modify-participants-list"></div>
+              <div id="modify-plan-error" class="mt-2"></div>
               <button type="button" id="add-modify-participant-btn" class="btn btn-sm btn-outline-primary">+ Add Participant</button>
             </div>
           </div>
@@ -161,7 +163,7 @@
       rows.forEach(r => {
         const inp = r.querySelector('input');
         const action = r.querySelector('.action-div');
-        if (!action) return;
+        if (!action || !inp) return;
         action.innerHTML = '';
         const userId = inp.dataset.userId || '';
         if (String(userId) === String(currentModifyPlanCurrentUserId) && currentModifyPlanCurrentUserId) {
@@ -177,7 +179,7 @@
           btn.type = 'button';
           btn.className = 'btn btn-sm btn-outline-secondary set-to-me-btn';
           btn.textContent = 'Swap';
-          if ( inp.dataset.userId.length !== 0 ){
+          if ( inp !== null && inp.dataset.userId.length !== 0 ){
             btn.disabled = true;
           } else {
             btn.disabled = false;
@@ -188,16 +190,38 @@
             }
             inp.dataset.userId = currentModifyPlanCurrentUserId ? String(currentModifyPlanCurrentUserId) : '';
             inp.dataset.role = yourRow ? yourRow.querySelector('input').dataset.role : 'member';
-            const oldUserId = yourRow ? (yourRow.querySelector('input').dataset.userId || '') : '';
             if (yourRow) {
-              yourRow.querySelector('input').dataset.userId ="";
-              yourRow.querySelector('input').dataset.role ="member";
+              yourRow.querySelector('input').dataset.userId = "";
+              yourRow.querySelector('input').dataset.role = "member";
             }
             refreshYouIndicators();
           };
           action.appendChild(btn);
         }
       });
+    }
+    // Validate an array of names: ensure non-empty and no duplicates (case-insensitive)
+    function validateParticipantNames(names) {
+      const trimmed = names.map(n => (n || '').trim());
+      for (let i = 0; i < trimmed.length; i++) {
+        if (!trimmed[i]) return { ok: false, message: `Participant ${i + 1} must have a name.` };
+      }
+      const lower = trimmed.map(n => n.toLowerCase());
+      const set = new Set(lower);
+      if (set.size !== lower.length) return { ok: false, message: 'Duplicate participant names detected.' };
+      return { ok: true };
+    }
+
+    function showModalError(elId, message) {
+      const container = document.getElementById(elId);
+      if (!container) return;
+      container.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
+    }
+
+    function hideModalError(elId) {
+      const container = document.getElementById(elId);
+      if (!container) return;
+      container.innerHTML = '';
     }
     const resetJoinBtn = document.getElementById("reset-join-btn");
     if (resetJoinBtn) {
@@ -312,6 +336,8 @@
       input.dataset.role = 'member';
       const actionDiv = document.createElement('div');
       actionDiv.className = 'd-flex align-items-center action-div';
+      // hide modify errors when typing
+      input.addEventListener('input', () => hideModalError('modify-plan-error'));
       row.appendChild(input);
       row.appendChild(actionDiv);
       modifyParticipantsList.appendChild(row);
@@ -387,22 +413,33 @@
       input.type = "text";
       input.className = "form-control mb-2 participant-input";
       input.placeholder = `Participant ${count}`;
+      // hide any existing error when the user starts typing
+      input.addEventListener('input', () => hideModalError('add-plan-error'));
       participantsList.appendChild(input);
     };
 
     addform.onsubmit = e => {
       e.preventDefault();
       const planName = input.value;
-      // Only gather participant inputs from the Add Plan modal (avoid pulling
-      // inputs from the Modify modal which also uses the same .participant-input class)
       const participantInputs = participantsList.querySelectorAll(".participant-input");
-      const participants = Array.from(participantInputs).map(p => p.value.trim()).filter(Boolean);
+      const participants = Array.from(participantInputs).map(p => p.value.trim());
+
+      // client-side validation
+      const valid = validateParticipantNames(participants);
+      if (!valid.ok) {
+        showModalError('add-plan-error', valid.message);
+        return;
+      }
+      hideModalError('add-plan-error');
 
       fetch("/plans/api/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: planName, participants })
-      }).then(() => {
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(j => { showModalError('add-plan-error', j.error || 'Failed to create plan'); });
+        }
         input.value = "";
         participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1 (You)">';
         const modal = bootstrap.Modal.getInstance(document.getElementById('addPlanModal'));
@@ -417,6 +454,7 @@
     addModalEl.addEventListener('hidden.bs.modal', () => {
       input.value = '';
       participantsList.innerHTML = '<input type="text" class="form-control mb-2 participant-input" placeholder="Participant 1 (You)">';
+      hideModalError('add-plan-error');
     });
 
     joinBtn.onclick = e => {
@@ -442,6 +480,19 @@
       e.preventDefault();
       const planName = modifyPlanNameInput.value;
       const rows = Array.from(modifyParticipantsList.querySelectorAll('.participant-row'));
+      const names = rows.map(r => {
+        const inp = r.querySelector('input');
+        return inp ? inp.value.trim() : '';
+      });
+
+      // client-side validation
+      const valid = validateParticipantNames(names);
+      if (!valid.ok) {
+        showModalError('modify-plan-error', valid.message);
+        return;
+      }
+      hideModalError('modify-plan-error');
+
       const participants = rows.map(r => {
         const inp = r.querySelector('input');
         const ppId = inp.dataset.ppId || '';
@@ -456,7 +507,10 @@
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      }).then(() => {
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(j => { showModalError('modify-plan-error', j.error || 'Failed to modify plan'); });
+        }
         const modal = bootstrap.Modal.getInstance(document.getElementById('modifyPlanModal'));
         modal.hide();
         loadPlans();
@@ -470,6 +524,7 @@
       modifyPlanNameInput.value = '';
       currentModifyPlanId = null;
       currentModifyPlanCurrentUserId = null;
+      hideModalError('modify-plan-error');
     });
     loadPlans();
   });

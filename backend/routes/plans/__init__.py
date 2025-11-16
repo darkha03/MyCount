@@ -1,6 +1,11 @@
 from flask import Blueprint, jsonify, request, render_template, session
 from backend.utils.auth import login_required
 from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
+from .helpers import (
+    validate_participant_name_list,
+    validate_participants_payload,
+    apply_participants_updates,
+)
 import secrets
 from datetime import datetime
 
@@ -66,6 +71,9 @@ def add_plan():
     data = request.get_json()
     hash_id = generate_hash_id()
     participants = data.get("participants", [])  # List of participant usernames
+    ok, msg = validate_participant_name_list(participants)
+    if not ok:
+        return jsonify({"error": msg}), 400
     # Create new plan
     plan = Plan(name=data["name"], hash_id=hash_id, created_by=user.id)
     db.session.add(plan)
@@ -142,30 +150,10 @@ def modify_plan(plan_id):
     # "user_id": <user_id or null>, "role": "member"}, ...]
     participants_data = data.get("participants")
     if participants_data is not None:
-        # Build a map of existing participants by id for validation
-        existing = {p.id: p for p in PlanParticipant.query.filter_by(plan_id=plan.id).all()}
-        processed_ids = set()
-        for item in participants_data:
-            pp_id = item.get("id")
-            if pp_id and pp_id in existing:
-                pp = existing[pp_id]
-                # Update name and user_id and role if provided
-                pp.name = item.get("name", pp.name)
-                # Only update user_id if explicitly provided (allow null to unassign)
-                if "user_id" in item:
-                    pp.user_id = item.get("user_id")
-                if "role" in item:
-                    pp.role = item.get("role")
-                processed_ids.add(pp_id)
-            else:
-                # New participant (no id) -> create
-                new_pp = PlanParticipant(
-                    user_id=item.get("user_id"),
-                    plan_id=plan.id,
-                    role=item.get("role", "member"),
-                    name=item.get("name", ""),
-                )
-                db.session.add(new_pp)
+        ok, msg = validate_participants_payload(participants_data)
+        if not ok:
+            return jsonify({"error": msg}), 400
+        apply_participants_updates(plan, participants_data)
 
     db.session.commit()
     return jsonify({"message": f"Plan {plan.name} updated."}), 200

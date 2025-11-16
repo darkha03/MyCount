@@ -57,7 +57,7 @@ def test_plan_join_post_no_slot(client, user_factory, plan_factory):
     assert pp is None
 
 
-def test_plant_join_post_already_participant(client, user_factory, plan_factory):
+def test_plan_join_post_already_participant(client, user_factory, plan_factory):
     owner = user_factory("owner", password="pw")
     member = user_factory("member", password="pw")
     member2 = user_factory("member2", password="pw2")
