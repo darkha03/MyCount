@@ -24,42 +24,9 @@
     </div>
 
     <!-- Main Content Area -->
-    <div class="col-md-9 col-sm-12" id="plan-content"> 
-      <script>initExpensesSection("{{plan.hash_id}}");</script>
+    <div class="col-md-9 col-sm-12" id="plan-content" data-plan-id="{{ plan.hash_id }}"> 
     </div>
   </div>
 </div>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const navLinks = document.querySelectorAll(".col-md-3 .nav-link");
-  const content = document.getElementById("plan-content");
-  const planId = "{{ plan.hash_id }}";
-  console.log("Plan ID:", planId);
-  navLinks.forEach(link => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-
-      navLinks.forEach(l => l.classList.remove("active"));
-      link.classList.add("active");
-
-      const section = link.dataset.section;
-      fetch(`/plans/${planId}/section/${section}`)
-        .then(res => res.text())
-        .then(html => {
-          content.innerHTML = html;
-          if (section === "expenses") {
-            initExpensesSection(planId);
-          }
-          if (section === "reimbursements") {
-            initReimbursementSection(planId);
-          }
-          if (section === "statistics") {
-            initStatisticsSection(planId);
-          }
-        });
-    });
-  });
-});
-</script>
+<script src="{{ url_for('static', filename='js/view_plan.js') }}"></script>
 {% endblock %}
