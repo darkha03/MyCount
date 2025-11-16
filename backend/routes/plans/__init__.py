@@ -1,10 +1,12 @@
-from flask import Blueprint, jsonify, request, render_template, session
+from flask import Blueprint, Response, jsonify, request, render_template, session, send_file
 from backend.utils.auth import login_required
 from backend.models import db, User, Plan, PlanParticipant, Expense, ExpenseShare
 from .helpers import (
     validate_participant_name_list,
     validate_participants_payload,
     apply_participants_updates,
+    build_plan_xlsx_stream,
+    build_plan_csv,
 )
 import secrets
 from datetime import datetime
@@ -251,10 +253,6 @@ def view_plan(hash_id):
 @plans_bp.route("/<hash_id>/export.csv", methods=["GET"])
 @login_required
 def export_plan_csv(hash_id):
-    import csv
-    import io
-    from flask import Response
-
     username = session.get("username")
     user = User.query.filter_by(username=username).first()
     if not user:
@@ -263,40 +261,40 @@ def export_plan_csv(hash_id):
     for participation in user.participations:
         if participation.plan.hash_id == hash_id:
             plan = participation.plan
-            # Collect expenses
             expenses = Expense.query.filter_by(plan_id=plan.id).order_by(Expense.date).all()
 
-            output = io.StringIO()
-            writer = csv.writer(output)
-
-            # Header row
-            writer.writerow(["date", "description", "amount", "payer", "participants", "amounts"])
-
-            for exp in expenses:
-                shares = ExpenseShare.query.filter_by(expense_id=exp.id).all()
-                participant_names = [s.name for s in shares]
-                participant_amounts = [str(s.amount) for s in shares]
-                writer.writerow(
-                    [
-                        exp.date.isoformat(),
-                        exp.description,
-                        f"{exp.amount:.2f}",
-                        exp.payer_name,
-                        ",".join(participant_names),
-                        ",".join(participant_amounts),
-                    ]
-                )
-
-            csv_content = output.getvalue()
-            output.close()
-
+            # Build CSV using helper
+            csv_content = build_plan_csv(plan, expenses)
             headers = {
                 "Content-Type": "text/csv; charset=utf-8",
-                "Content-Disposition": f"attachment; filename=plan_{plan.hash_id}.csv",
+                "Content-Disposition": f"attachment; filename=plan_{plan.name}.csv",
             }
             return Response(csv_content, headers=headers)
 
     return jsonify({"error": "Plan not found"}), 404
+
+
+# Export plan expenses as XLSX
+@plans_bp.route("/<hash_id>/export.xlsx", methods=["GET"])
+@login_required
+def export_plan_xlsx(hash_id):
+    username = session.get("username")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    for participation in user.participations:
+        if participation.plan.hash_id == hash_id:
+            plan = participation.plan
+            expenses = Expense.query.filter_by(plan_id=plan.id).order_by(Expense.date).all()
+
+            output = build_plan_xlsx_stream(plan, expenses)
+            return send_file(
+                output,
+                as_attachment=True,
+                download_name=f"plan_{plan.name}.xlsx",
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
 
 @plans_bp.route("/api/plans/<hash_id>/expenses", methods=["GET"])
@@ -352,12 +350,14 @@ def get_plan_expenses(hash_id):
             participant = PlanParticipant.query.filter_by(plan_id=plan.plan.id).all()
             participant_names = [p.name for p in participant]
             sorted_dates = sorted(expenses_by_date.keys(), reverse=True)
+            default_date = datetime.now().date().isoformat()
             return render_template(
                 "plans/expenses.html",
                 expenses_by_date=expenses_by_date,
                 sorted_dates=sorted_dates,
                 plan=plan.plan,
                 participants=participant_names,
+                default_date=default_date,
             )
     return jsonify({"error": "Plan not found"}), 404
 

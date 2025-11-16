@@ -92,6 +92,28 @@ Features (current)
 	- Mobile-friendly navbar (toggler)
 	- Cards and list groups for clean lists
 
+Recent changes (security, exports, and refactors)
+-----------------------------------------------
+
+- Export improvements:
+	- Added CSV and XLSX export endpoints for plans: `GET /plans/<hash_id>/export.csv` and `GET /plans/<hash_id>/export.xlsx`. Both exports include one column per plan participant	containing the participant's share for each expense. The XLSX exporter uses `openpyxl`.
+
+- Security & sanitization:
+	- Frontend sanitization now prefers a local `DOMPurify` copy served from
+	`backend/static/js/dompurify.min.js` and `layout.html` includes that script directly.
+	- Templates and scripts were refactored so inline scripts were moved to external JS files (e.g. `backend/static/js/app.js`, `plans_dashboard.js` `view_plan.js`) to better support a strict Content Security Policy (CSP).
+	- `setContentFromHtml` and related helpers use `DOMPurify` when available and fall back to a safe sanitizer if not — reducing the app's XSS surface.
+
+- CSP and CDN handling:
+	- CSP headers are configurable via `backend/config.py` so you can allow required CDN hosts (Bootstrap, Chart.js, fonts) in non-strict deployments. For local-only setups `script-src 'self'` is sufficient because `dompurify.min.js` is served locally.
+
+- Code organization / helpers:
+	- Export builders were moved into `backend/routes/plans/helpers.py`:
+		- `_build_plan_xlsx_stream(plan, expenses)` returns an in-memory XLSX BytesIO stream.
+		- `build_plan_csv(plan, expenses)` returns CSV text matching the XLSX layout.
+	- Keeping these builders in `helpers.py` makes them easier to test and reuse.
+
+
 What’s implemented and what I learned
 -------------------------------------
 
@@ -107,6 +129,7 @@ What’s implemented and what I learned
 	- Avoid duplicate event listeners when reloading sections
 	- Render charts with Chart.js from DOM-extracted data
 - Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
+- Implement a CI/CD pipeline for automated testing and deployment
 
 How to use (quick tour)
 -----------------------
@@ -128,14 +151,6 @@ API/Routes (selected)
 - `DELETE /plans/api/plans/<plan_id>` → Leave/delete plan
 
 Note: Most plan actions are under the `plans` blueprint and require login.
-
-Roadmap
--------
-
-- Proper user registration and password reset
-- Role-based permissions per plan
-- Export/Import (CSV)
-- Test suite and CI
 
 Screenshots / Demo
 ---------------------------------
