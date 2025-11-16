@@ -35,3 +35,22 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
     }
+    # Content Security Policy defaults - can be overridden via env vars or subclassing
+    # Provide common CDNs used by Bootstrap/Chart.js; override in production for tighter policy
+    CSP_DEFAULT_SRC = ["'self'"]
+    CSP_SCRIPT_SRC = [
+        "'self'",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net",
+        "https://unpkg.com",
+    ]
+    CSP_STYLE_SRC = [
+        "'self'",
+        "https://cdn.jsdelivr.net",
+        "https://fonts.googleapis.com",
+        "'unsafe-inline'",
+    ]
+    CSP_IMG_SRC = ["'self'", "data:"]
+    CSP_FONT_SRC = ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com", "data:"]
+    CSP_CONNECT_SRC = ["'self'", "https://api.github.com", "https://cdn.jsdelivr.net"]

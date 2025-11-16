@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.type = 'button';
         btn.className = 'btn btn-sm btn-outline-secondary set-to-me-btn';
         btn.textContent = 'Swap';
-        if ( inp !== null && inp.dataset.userId.length !== 0 ){
+        if ( inp.dataset.userId.length !== 0 ){
           btn.disabled = true;
         } else {
           btn.disabled = false;

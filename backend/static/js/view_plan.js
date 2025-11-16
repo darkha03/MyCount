@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try { initReimbursementSection(planId); } catch (e) { }
           }
           if (section === "statistics") {
-            try { initStatisticsSection(planId); } catch (e) { }
+            try { initStatisticsSection(); } catch (e) { }
           }
         });
     });

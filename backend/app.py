@@ -82,13 +82,33 @@ def create_app():
 
     @app.after_request
     def _apply_csp(response):
-        # Strict CSP allowing only same-origin resources and scripts
+        # Build Content-Security-Policy from config lists. These defaults allow
+        # popular CDNs (jsdelivr, cdnjs, unpkg). For production, tighten or
+        # override in `backend.config.Config`.
+        cfg = app.config
+
+        def join_list(key, default):
+            vals = cfg.get(key, default) or default
+            # allow specifying comma-separated string in env if desired
+            if isinstance(vals, str):
+                vals = [v.strip() for v in vals.split(",") if v.strip()]
+            return " ".join(vals)
+
+        default_src = join_list("CSP_DEFAULT_SRC", ["'self'"])
+        script_src = join_list("CSP_SCRIPT_SRC", ["'self'"])
+        style_src = join_list("CSP_STYLE_SRC", ["'self'"])
+        img_src = join_list("CSP_IMG_SRC", ["'self'", "data:"])
+        font_src = join_list("CSP_FONT_SRC", ["'self'", "data:"])
+        connect_src = join_list("CSP_CONNECT_SRC", ["'self'"])
+
         policy = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "object-src 'none'; "
-            "base-uri 'self'; "
-            "frame-ancestors 'none'"
+            f"default-src {default_src}; "
+            f"script-src {script_src}; "
+            f"style-src {style_src}; "
+            f"font-src {font_src}; "
+            f"img-src {img_src}; "
+            f"connect-src {connect_src}; "
+            "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
         )
         response.headers["Content-Security-Policy"] = policy
         return response
