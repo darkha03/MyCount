@@ -24,6 +24,28 @@ document.addEventListener("DOMContentLoaded", () => {
     while (el.firstChild) el.removeChild(el.firstChild);
   }
 
+  // Helper to handle JSON responses: resolve with parsed JSON on OK,
+  // otherwise try to extract an error message and throw.
+  function handleJsonResponse(res) {
+    if (res.ok) return res.json();
+    return res.json().then(j => {
+      const msg = (j && j.error) ? j.error : (res.statusText || 'Request failed');
+      throw new Error(msg);
+    }).catch(() => {
+      throw new Error(res.statusText || 'Request failed');
+    });
+  }
+
+  // Helper to handle responses that may not return JSON body on success
+  function handleNoContentResponse(res) {
+    if (res.ok) return res;
+    return res.json().then(j => {
+      throw new Error(j && j.error ? j.error : (res.statusText || 'Request failed'));
+    }).catch(() => {
+      throw new Error(res.statusText || 'Request failed');
+    });
+  }
+
   function refreshYouIndicators() {
     const rows = Array.from(modifyParticipantsList.querySelectorAll('.participant-row'));
     let yourRow = null;
@@ -121,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function loadPlans() {
     fetch("/plans/api/plans")
-    .then(res => res.json())
+    .then(handleJsonResponse)
     .then(data => {
       clearElement(list);
       data.forEach(plan => {
@@ -206,6 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       attachModifyHandlers();
       attachShareHandlers();
+    }).catch(err => {
+      alert('Failed to load plans: ' + (err && err.message ? err.message : 'Network error'));
     });
   }
 
@@ -215,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.stopPropagation();
         currentModifyPlanId = btn.getAttribute("data-id");
         fetch(`/plans/api/plans/${currentModifyPlanId}`)
-          .then(res => res.json())
+          .then(handleJsonResponse)
           .then(plan => {
             modifyPlanNameInput.value = plan.name;
             clearElement(modifyParticipantsList);
@@ -227,6 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const input = document.createElement('input');
               input.type = 'text';
               input.className = 'form-control participant-input';
+              input.required = true;
               input.value = p.name || '';
               input.placeholder = `Participant ${idx + 1}`;
               input.dataset.ppId = p.id || '';
@@ -246,6 +271,8 @@ document.addEventListener("DOMContentLoaded", () => {
             refreshYouIndicators();
             const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modifyPlanModal'));
             modal.show();
+          }).catch(err => {
+            showModalError('modify-plan-error', 'Failed to load plan: ' + (err && err.message ? err.message : 'Network error'));
           });
       };
     });
@@ -258,6 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
     input.type = "text";
     input.className = "form-control participant-input";
     input.placeholder = `Participant ${count}`;
+    input.required = true;
     input.dataset.ppId = '';
     input.dataset.userId = '';
     input.dataset.role = 'member';
@@ -304,7 +332,7 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     })
-    .then(res => res.json())
+    .then(handleJsonResponse)
     .then(data =>{
       clearElement(joinResponse);
       const selLabel = document.createElement('label');
@@ -340,11 +368,20 @@ document.addEventListener("DOMContentLoaded", () => {
         err.textContent = data.error || 'Unknown error';
         joinResponse.appendChild(err);
       }
+    }).catch(err => {
+      clearElement(joinResponse);
+      const errEl = document.createElement('div');
+      errEl.className = 'alert alert-danger';
+      errEl.textContent = err && err.message ? err.message : 'Failed to fetch plan';
+      joinResponse.appendChild(errEl);
     });
   }
 
   window.deletePlan = function(id) {
-    fetch(`/plans/api/plans/${id}`, { method: "DELETE" }).then(loadPlans);
+    fetch(`/plans/api/plans/${id}`, { method: "DELETE" })
+      .then(handleNoContentResponse)
+      .then(() => loadPlans())
+      .catch(err => alert('Failed to delete plan: ' + (err && err.message ? err.message : 'Network error')));
   };
 
   addParticipantBtn.onclick = () => {
@@ -353,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     input.type = "text";
     input.className = "form-control mb-2 participant-input";
     input.placeholder = `Participant ${count}`;
-    // hide any existing error when the user starts typing
+    input.required = true;
     input.addEventListener('input', () => hideModalError('add-plan-error'));
     participantsList.appendChild(input);
   };
@@ -376,20 +413,22 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: planName, participants })
-    }).then(res => {
-      if (!res.ok) {
-        return res.json().then(j => { showModalError('add-plan-error', j.error || 'Failed to create plan'); });
-      }
+    }).then(handleJsonResponse).then(() => {
       input.value = "";
       clearElement(participantsList);
       const pinput = document.createElement('input');
       pinput.type = 'text';
       pinput.className = 'form-control mb-2 participant-input';
       pinput.placeholder = 'Participant 1 (You)';
+      pinput.required = true;
+      // hide any existing error when the user starts typing
+      pinput.addEventListener('input', () => hideModalError('add-plan-error'));
       participantsList.appendChild(pinput);
       const modal = bootstrap.Modal.getInstance(document.getElementById('addPlanModal'));
       modal.hide();
       loadPlans();
+    }).catch(err => {
+      showModalError('add-plan-error', err && err.message ? err.message : 'Failed to create plan');
     });
   };
 
@@ -403,6 +442,8 @@ document.addEventListener("DOMContentLoaded", () => {
     pinput.type = 'text';
     pinput.className = 'form-control mb-2 participant-input';
     pinput.placeholder = 'Participant 1 (You)';
+    pinput.required = true;
+    pinput.addEventListener('input', () => hideModalError('add-plan-error'));
     participantsList.appendChild(pinput);
     hideModalError('add-plan-error');
   });
@@ -419,10 +460,16 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ participant_name: selectedName })
-    }).then(() => {
+    }).then(handleJsonResponse).then(() => {
       const modal = bootstrap.Modal.getInstance(document.getElementById('joinPlanModal'));
       modal.hide();
       loadPlans();
+    }).catch(err => {
+      clearElement(joinResponse);
+      const errEl = document.createElement('div');
+      errEl.className = 'alert alert-danger';
+      errEl.textContent = err && err.message ? err.message : 'Failed to join plan';
+      joinResponse.appendChild(errEl);
     });
   };
 
@@ -457,13 +504,12 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    }).then(res => {
-      if (!res.ok) {
-        return res.json().then(j => { showModalError('modify-plan-error', j.error || 'Failed to modify plan'); });
-      }
+    }).then(handleJsonResponse).then(() => {
       const modal = bootstrap.Modal.getInstance(document.getElementById('modifyPlanModal'));
       modal.hide();
       loadPlans();
+    }).catch(err => {
+      showModalError('modify-plan-error', err && err.message ? err.message : 'Failed to modify plan');
     });
   };
   // Clear Modify Plan modal when hidden to avoid leaving stale participant
