@@ -13,6 +13,7 @@ from backend.utils.auth import login_required
 from flask_migrate import Migrate
 from sqlalchemy.engine.url import make_url
 from pathlib import Path
+from datetime import timezone
 
 # Initialize Flask-Migrate (database migrations)
 migrate = Migrate()
@@ -62,24 +63,72 @@ def index():
 
 
 def create_app():
+    # Keep create_app small and delegate initialization to helpers
     app = Flask(__name__)
     app.config.from_object("backend.config.Config")
+
+    _init_extensions(app)
+    _register_blueprints(app)
+    _register_context_processors(app)
+    _configure_csp(app)
+
+    # Register top-level views
+    app.add_url_rule("/", "index", index)
+
+    return app
+
+
+def _init_extensions(app: Flask):
+    """Initialize extensions and ensure DB path for sqlite."""
     db.init_app(app)
-    # Wire migrations to the app and SQLAlchemy
+    # Wire migrations to the app and SQLAlchemy and ensure sqlite dir
     with app.app_context():
-        # Ensure the SQLite directory exists if using sqlite
         db_url = make_url(app.config.get("SQLALCHEMY_DATABASE_URI", ""))
         if db_url.drivername == "sqlite" and db_url.database:
             Path(db_url.database).parent.mkdir(parents=True, exist_ok=True)
-        # Only print DB URL when debugging or explicitly requested
         if app.debug or os.environ.get("PRINT_DB_URL"):
-            print(f"DB URL: {db.engine.url}")
+            try:
+                print(f"DB URL: {db.engine.url}")
+            except Exception:
+                pass
     migrate.init_app(app, db)
-    app.secret_key = app.config["SECRET_KEY"]
+    app.secret_key = app.config.get("SECRET_KEY")
     CORS(app)
+
+
+def _register_blueprints(app: Flask):
     app.register_blueprint(plans_bp)
     app.register_blueprint(auth_bp)
 
+
+def _register_context_processors(app: Flask):
+    @app.context_processor
+    def inject_current_user():
+        # Provide minimal current user info to templates to support UI (guest timer)
+        username = session.get("username")
+        if not username:
+            return {}
+        user = None
+        try:
+            user = User.query.filter_by(username=username).first()
+        except Exception:
+            return {}
+        if not user:
+            return {}
+        info = {
+            "username": user.username,
+            "is_guest": bool(getattr(user, "is_guest", False)),
+            "guest_expires_at": None,
+        }
+        if info["is_guest"] and getattr(user, "guest_expires_at", None):
+            exp = user.guest_expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            info["guest_expires_at"] = exp.astimezone(timezone.utc).isoformat()
+        return {"current_user_info": info}
+
+
+def _configure_csp(app: Flask):
     @app.after_request
     def _apply_csp(response):
         # Build Content-Security-Policy from config lists. These defaults allow
@@ -112,11 +161,6 @@ def create_app():
         )
         response.headers["Content-Security-Policy"] = policy
         return response
-
-    # Register top-level views
-    app.add_url_rule("/", "index", index)
-
-    return app
 
 
 app = create_app()

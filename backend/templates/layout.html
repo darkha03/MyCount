@@ -21,6 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="{{ url_for('static', filename='js/dompurify.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/guest_timer.js') }}"></script>
 </head>
 <body>
   <header>
@@ -31,6 +32,13 @@
       </button>
       <div class="collapse navbar-collapse" id="mainNavbar">
         <ul class="navbar-nav ms-auto">
+          {% if current_user_info and current_user_info.is_guest %}
+          <li class="nav-item">
+            <span class="nav-link">
+              <small>Guest expires in <span id="guest-timer" data-expire="{{ current_user_info.guest_expires_at }}">--:--:--</span></small>
+            </span>
+          </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link" href="/">Home</a>
           </li>
