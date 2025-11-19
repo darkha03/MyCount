@@ -103,3 +103,24 @@ def expense_factory(app, plan_factory):
         return expense
 
     return _create
+
+
+@pytest.fixture(scope="function")
+def guest_user_factory(app):
+    created = []
+
+    def _create(username="guest", email=None, password="guestpass", expires_in_hours=1):
+        if email is None:
+            email = f"{username}@test.local"
+        from datetime import datetime, timezone, timedelta
+
+        now = datetime.now(timezone.utc)
+        guest_expires_at = now + timedelta(hours=expires_in_hours)
+        u = User(username=username, email=email, is_guest=True, guest_expires_at=guest_expires_at)
+        u.set_password(password)
+        db.session.add(u)
+        db.session.commit()
+        created.append(u)
+        return u
+
+    return _create
