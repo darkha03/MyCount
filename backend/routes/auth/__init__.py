@@ -97,7 +97,7 @@ def guestlogin():
         return redirect(url_for("auth.login"))
 
     # Generate unique guest username
-    for _ in range(5):  # few attempts
+    for _ in range(5):  # Try up to 5 times to generate a unique guest username
         noun = secrets.token_hex(3)
         candidate = f"guest-{noun}"
         if not User.query.filter_by(username=candidate).first():
