@@ -18,7 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const section = link.dataset.section;
       fetch(`/plans/${planId}/section/${section}`)
-        .then(res => res.text())
+        .then(res => {
+          if (!res.ok) return res.text().then(t => { throw new Error(t || res.statusText); });
+          return res.text();
+        })
         .then(html => {
           try {
             const parser = new DOMParser();
@@ -39,6 +42,14 @@ document.addEventListener("DOMContentLoaded", () => {
           if (section === "statistics") {
             try { initStatisticsSection(); } catch (e) { }
           }
+        })
+        .catch(err => {
+          console.error('Failed to load section', err);
+          while (content.firstChild) content.removeChild(content.firstChild);
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-danger';
+          alertDiv.textContent = 'Failed to load section: ' + (err.message || 'Unknown error');
+          content.appendChild(alertDiv);
         });
     });
   });

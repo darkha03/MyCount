@@ -4,8 +4,43 @@ let expenseDeleteListenerAttached = false;
 function setContentFromHtml(container, html) {
   if (!container) return;
   try {
+    // Prefer DOMPurify when available (sanitizes thoroughly)
+    let sanitized = html;
+    if (window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+      try {
+        sanitized = DOMPurify.sanitize(html);
+      } catch (e) {
+        // If DOMPurify fails for some reason, fall back to our lighter sanitizer
+        sanitized = html;
+      }
+    }
+
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(sanitized, 'text/html');
+
+    // Extra hardening: remove potentially dangerous elements that may remain
+    const forbiddenEls = ['script', 'iframe', 'object', 'embed', 'link', 'meta'];
+    forbiddenEls.forEach(tag => {
+      doc.querySelectorAll(tag).forEach(n => n.remove());
+    });
+
+    // Strip inline event handlers and javascript: URIs as a fallback layer
+    doc.querySelectorAll('*').forEach(node => {
+      // copy attributes because we'll modify while iterating
+      Array.from(node.attributes || []).forEach(attr => {
+        const name = attr.name || '';
+        const val = attr.value || '';
+        if (/^on/i.test(name)) {
+          node.removeAttribute(name);
+          return;
+        }
+        if (/^(href|src)$/i.test(name) && /^javascript:/i.test(val)) {
+          node.removeAttribute(name);
+          return;
+        }
+      });
+    });
+
     // Move parsed children into the container
     container.replaceChildren(...Array.from(doc.body.childNodes));
   } catch (e) {

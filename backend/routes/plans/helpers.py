@@ -1,9 +1,6 @@
-"""Helper utilities for the plans blueprint.
-
-Contains participant validation and update helpers extracted from the
-route handlers to keep the routes concise and testable.
-"""
-
+import openpyxl
+from io import BytesIO
+from backend.models import PlanParticipant, ExpenseShare
 from typing import List, Tuple, Optional
 
 
@@ -71,3 +68,109 @@ def apply_participants_updates(plan, participants_data: List[dict]):
                 name=item.get("name", ""),
             )
             db.session.add(new_pp)
+
+
+def build_plan_xlsx_stream(plan, expenses):
+    """Create an XLSX workbook for a plan and return a BytesIO stream."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Plan {plan.name} Expenses"
+
+    # Prepare participant columns
+    plan_participants = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+    plan_participant_names = [p.name for p in plan_participants]
+
+    # Header
+    header = ["Date", "Description", "Amount", "Payer"] + plan_participant_names
+    ws.append(header)
+
+    # Rows
+    for exp in expenses:
+        shares = ExpenseShare.query.filter_by(expense_id=exp.id).all()
+        share_map = {s.name: (s.amount if s.amount is not None else 0) for s in shares}
+
+        row = [
+            exp.date.strftime("%Y-%m-%d") if getattr(exp, "date", None) else "",
+            exp.description or "",
+            float(exp.amount or 0),
+            exp.payer_name or "",
+        ]
+
+        for pname in plan_participant_names:
+            amt = share_map.get(pname, 0)
+            try:
+                row.append(float(amt))
+            except Exception:
+                row.append(0.0)
+
+        ws.append(row)
+
+    # Numeric formatting for amount and shares
+    participant_count = len(plan_participant_names)
+    amount_col_idx = 3
+    last_share_col_idx = amount_col_idx + participant_count
+    for row_cells in ws.iter_rows(min_row=2, min_col=amount_col_idx, max_col=last_share_col_idx):
+        for cell in row_cells:
+            cell.number_format = "0.00"
+
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value is not None:
+                    max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+        ws.column_dimensions[column].width = max_length + 2
+
+    out = BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return out
+
+
+def build_plan_csv(plan, expenses):
+    """Build CSV content for a plan's expenses.
+
+    Returns a string containing CSV data with header:
+    date,description,amount,payer,<participant1>,<participant2>,...
+    Each row contains the expense fields and one column per plan participant
+    with the participant's share for that expense (formatted with two decimals).
+    """
+    import csv
+    import io
+
+    plan_participants = PlanParticipant.query.filter_by(plan_id=plan.id).all()
+    plan_participant_names = [p.name for p in plan_participants]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    header = ["date", "description", "amount", "payer"] + plan_participant_names
+    writer.writerow(header)
+
+    for exp in expenses:
+        shares = ExpenseShare.query.filter_by(expense_id=exp.id).all()
+        share_map = {s.name: (s.amount if s.amount is not None else 0) for s in shares}
+
+        row = [
+            exp.date.isoformat() if getattr(exp, "date", None) else "",
+            exp.description or "",
+            f"{(exp.amount or 0):.2f}",
+            exp.payer_name or "",
+        ]
+
+        for pname in plan_participant_names:
+            amt = share_map.get(pname, 0)
+            try:
+                row.append(f"{float(amt):.2f}")
+            except Exception:
+                row.append("0.00")
+
+        writer.writerow(row)
+
+    csv_text = output.getvalue()
+    output.close()
+    return csv_text
