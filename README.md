@@ -36,10 +36,15 @@ mycount/
 │  │  ├─ layout.html              # Base layout (Bootstrap, nav, global JS/CSS)
 │  │  ├─ index.html               # Dashboard (recent plans + reimbursements)
 │  │  ├─ auth/                    # Login/Register views
+│  │  ├─ profile.html             # User profile page + edit/change-password modals
 │  │  └─ plans/                   # Plan pages (dashboard, expenses, statistics, reimbursements, view)
 │  ├─ static/
 │  │  ├─ css/style.css            # Global styling
-│  │  └─ js/app.js                # Global JS (page-specific hooks)
+│  │  └─ js/
+│  │     ├─ app.js                # Global JS (page-specific hooks)
+│  │     ├─ plans_dashboard.js    # Dashboard JS (load plans, modify/share handlers)
+│  │     ├─ view_plan.js          # View plan page JS (sections loader)
+│  │     └─ dompurify.min.js      # Local DOMPurify copy for sanitization
 │  └─ utils/auth.py               # @login_required decorator
 │
 ├─ migrations/                    # Alembic migrations (checked-in)
