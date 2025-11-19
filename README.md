@@ -114,7 +114,7 @@ Recent changes (security, exports, and refactors)
 
 - Code organization / helpers:
 	- Export builders were moved into `backend/routes/plans/helpers.py`:
-		- `_build_plan_xlsx_stream(plan, expenses)` returns an in-memory XLSX BytesIO stream.
+		- `build_plan_xlsx_stream(plan, expenses)` returns an in-memory XLSX BytesIO stream.
 		- `build_plan_csv(plan, expenses)` returns CSV text matching the XLSX layout.
 	- Keeping these builders in `helpers.py` makes them easier to test and reuse.
 
