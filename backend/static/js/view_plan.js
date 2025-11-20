@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load default section (expenses) when the page first loads
   if (planId) {
-    try { initExpensesSection(planId); } catch (e) { /* initExpensesSection may be defined elsewhere */ }
+    try { initExpensesSection(planId); } catch (e) {}
   }
 
   const navLinks = document.querySelectorAll(".col-md-3 .nav-link");

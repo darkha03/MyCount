@@ -266,7 +266,6 @@ document.addEventListener("DOMContentLoaded", () => {
               modifyParticipantsList.appendChild(row);
             });
 
-            // store current user's id for use by Set-to-me buttons
             currentModifyPlanCurrentUserId = plan.current_user_id;
             refreshYouIndicators();
             const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modifyPlanModal'));
@@ -291,7 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
     input.dataset.role = 'member';
     const actionDiv = document.createElement('div');
     actionDiv.className = 'd-flex align-items-center action-div';
-    // hide modify errors when typing
     input.addEventListener('input', () => hideModalError('modify-plan-error'));
     row.appendChild(input);
     row.appendChild(actionDiv);
@@ -432,8 +430,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // Reset Add Plan modal inputs when it is hidden so stale values don't leak
-  // into future create operations.
   const addModalEl = document.getElementById('addPlanModal');
   addModalEl.addEventListener('hidden.bs.modal', () => {
     input.value = '';
@@ -512,8 +508,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showModalError('modify-plan-error', err && err.message ? err.message : 'Failed to modify plan');
     });
   };
-  // Clear Modify Plan modal when hidden to avoid leaving stale participant
-  // inputs in the DOM which could be picked up elsewhere.
   const modifyModalEl = document.getElementById('modifyPlanModal');
   modifyModalEl.addEventListener('hidden.bs.modal', () => {
     clearElement(modifyParticipantsList);

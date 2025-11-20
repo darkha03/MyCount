@@ -135,6 +135,7 @@ What’s implemented and what I learned
 	- Render charts with Chart.js from DOM-extracted data
 - Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
 - Implement a CI/CD pipeline for automated testing and deployment
+- Implement Security: CSP headers, DOMPurify sanitization, and server-side validation to reduce XSS and injection risks.
 
 How to use (quick tour)
 -----------------------
