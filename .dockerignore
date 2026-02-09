@@ -1,0 +1,9 @@
+venv
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+instance
+migrations/versions/__pycache__
+.env
