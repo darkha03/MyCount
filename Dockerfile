@@ -58,6 +58,14 @@ FROM base AS production
 
 # Copy only necessary files for production
 COPY backend/ ./backend/
+COPY migrations/ ./migrations/
+COPY entrypoint.sh .
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
+# Set entrypoint to run migrations before starting app
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Run the application
 CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:8000", "backend.app:create_app()"]
