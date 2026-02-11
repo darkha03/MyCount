@@ -60,4 +60,4 @@ FROM base AS production
 COPY backend/ ./backend/
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.main:app"]
+CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:8000", "backend.app:create_app()"]
