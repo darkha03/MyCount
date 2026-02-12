@@ -56,6 +56,11 @@ CMD ["flask", "--app", "backend.app:create_app", "run", "--host=0.0.0.0", "--por
 
 FROM base AS production
 
+# Install postgres client (for pg_isready)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+
 # Copy only necessary files for production
 COPY backend/ ./backend/
 COPY migrations/ ./migrations/
