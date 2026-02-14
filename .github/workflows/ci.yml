@@ -1,4 +1,4 @@
-name: CI / CD
+name: CI
 
 on:
   # Run CI on pushes to any branch (useful for feature branches). If you want to
@@ -46,4 +46,3 @@ jobs:
 
       - name: Run tests via test image
         run: docker run --rm mycount:test
-
