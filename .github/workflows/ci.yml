@@ -14,32 +14,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build lint image (Dockerfile target "lint")
+        uses: docker/build-push-action@v5
         with:
-          python-version: '3.13'
+          context: .
+          file: Dockerfile
+          target: lint
+          push: false
+          load: true
+          tags: mycount:lint
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Run lint via lint image
+        run: docker run --rm mycount:lint
 
-      - name: Lint (ruff)
-        run: |
-          if command -v ruff >/dev/null 2>&1; then ruff --version && ruff check .; else echo "ruff not installed, skipping"; fi
+      - name: Build test image (Dockerfile target "test")
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          target: test
+          push: false
+          load: true
+          tags: mycount:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: App import smoke test
-        env:
-          FLASK_APP: backend.app:create_app
-        run: |
-          python - <<'PY'
-          from backend.app import create_app
-          app = create_app()
-          print('Flask app factory OK')
-          PY
-
-      - name: Run tests (if any)
-        run: |
-          if [ -d tests ]; then pytest -q; else echo "No tests directory, skipping"; fi
+      - name: Run tests via test image
+        run: docker run --rm mycount:test
 
