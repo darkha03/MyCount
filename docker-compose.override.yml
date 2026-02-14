@@ -1,0 +1,19 @@
+services:
+  app:
+    profiles: [dev]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: darkha03/mycount:dev
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+  nginx:
+    profiles: []

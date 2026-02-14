@@ -8,134 +8,45 @@ Note: This is a work-in-progress learning project. The codebase demonstrates Fla
 Tech stack
 ----------
 
-- Backend
-	- Python 3.x, Flask 3.x
-	- Flask-Migrate (Alembic) for schema migrations
-	- SQLAlchemy 2.x ORM (SQLite by default)
-	- Jinja2 templating
-- Frontend
-	- Bootstrap 5.3 (responsive layout and components)
-	- Chart.js (bar charts for statistics)
-	- Vanilla JavaScript (global scripts in `backend/static/js/app.js`)
-- Tooling
-	- `pip` with a pinned `requirements.txt`
+- Backend: Python 3.13, Flask 3, Gunicorn, SQLAlchemy 2, Flask-Migrate (Alembic)
+- Frontend: Bootstrap 5.3, Chart.js, vanilla JS modules in `backend/static/js`
+- Database: PostgreSQL (default in Docker), SQLite fallback for local CLI use
+- Ops: Docker Compose (published image `darkha03/mycount:latest`), Nginx reverse proxy
+- Tooling: Ruff, Pytest, multi-stage Dockerfile (test, lint, dev, prod)
 
-Project structure
------------------
+Project structure (high level)
+------------------------------
 
-```
-mycount/
-├─ backend/
-│  ├─ app.py                      # Flask app factory (create_app), blueprints registration
-│  ├─ config.py                   # Centralized Flask/DB configuration
-│  ├─ models.py                   # SQLAlchemy models: User, Plan, PlanParticipant, Expense, ExpenseShare
-│  ├─ routes/
-│  │  ├─ auth/                    # Auth blueprint (login/logout)
-│  │  └─ plans/                   # Plans blueprint (CRUD, sections)
-│  ├─ templates/
-│  │  ├─ layout.html              # Base layout (Bootstrap, nav, global JS/CSS)
-│  │  ├─ index.html               # Dashboard (recent plans + reimbursements)
-│  │  ├─ auth/                    # Login/Register views
-│  │  ├─ profile.html             # User profile page + edit/change-password modals
-│  │  └─ plans/                   # Plan pages (dashboard, expenses, statistics, reimbursements, view)
-│  ├─ static/
-│  │  ├─ css/style.css            # Global styling
-│  │  └─ js/
-│  │     ├─ app.js                # Global JS (page-specific hooks)
-│  │     ├─ plans_dashboard.js    # Dashboard JS (load plans, modify/share handlers)
-│  │     ├─ view_plan.js          # View plan page JS (sections loader)
-│  │     └─ dompurify.min.js      # Local DOMPurify copy for sanitization
-│  └─ utils/auth.py               # @login_required decorator
-│
-├─ migrations/                    # Alembic migrations (checked-in)
-│  ├─ env.py
-│  ├─ alembic.ini
-│  ├─ script.py.mako
-│  └─ versions/                   # Auto-generated migration scripts
-│
-├─ instance/                      # SQLite DB lives here (created at runtime)
-├─ tests/                         # Pytest suite (fixtures + unit/feature tests)
-│  ├─ conftest.py                 # App/test client + factory fixtures
-│  ├─ test_auth.py                # Auth flow tests (register/login)
-│  ├─ test_plans.py               # Plan creation & retrieval tests
-│  └─ test_statistics.py          # Pure logic tests (balance/expense calculations)
-│
-├─ scripts/
-│  └─ pull_and_reload.sh          # PythonAnywhere scheduled deployment script
-├─ start.sh                       # Render start script (migrations + gunicorn)
-├─ wsgi.py                        # PythonAnywhere WSGI entrypoint
-├─ docs/                          # Screenshots and documentation assets
-├─ requirements.txt               # Locked dependencies
-├─ requirements-dev.txt           # Dev/test tooling (pytest, ruff, coverage, Flask-Testing)
-├─ .github/
-│  └─ workflows/
-│     └─ ci.yml                   # GitHub Actions (lint + tests + optional deploy)
-└─ README.md                      # This file
-```
+- backend/: app factory, blueprints (auth, plans), models, templates, static assets, utilities
+- migrations/: Alembic migrations (checked in)
+- tests/: Pytest suite (fixtures + feature/unit coverage)
+- Dockerfile: multi-stage (test, lint, dev, prod)
+- docker-compose.yml: prod-ish stack (app, nginx, Postgres, volume)
+- docker-compose.override.yml: dev profile (bind mount, reload on code change)
+- entrypoint.sh: waits for Postgres, applies migrations, starts Gunicorn
 
-Features (current)
-------------------
+Features (high level)
+---------------------
 
-- Authentication and session handling (simple username/password)
-- Plans
-	- Create, view, modify, delete (leave) plans
-	- Share a plan via hash ID (copy from modal)
-	- Dashboard shows recent plans (cards, responsive grid)
-- Expenses
-	- Add, view, group by date (section header per day)
-	- Split evenly or custom amounts per participant
-	- Edit/delete expense; live recalculation in the form
-- Reimbursements
-	- Compute who owes whom using a greedy settle-up
-	- “Mark as Paid” posts a reimbursement as an expense
-- Statistics
-	- Bar chart of participant balances (Chart.js)
-	- Optional datasets for total vs real expenses
-	- Reads labels/data from rendered HTML and builds the chart dynamically
-- UI/UX
-	- Bootstrap 5 responsive layout
-	- Mobile-friendly navbar (toggler)
-	- Cards and list groups for clean lists
-
-Recent changes (security, exports, and refactors)
------------------------------------------------
-
-- Export improvements:
-	- Added CSV and XLSX export endpoints for plans: `GET /plans/<hash_id>/export.csv` and `GET /plans/<hash_id>/export.xlsx`. Both exports include one column per plan participant	containing the participant's share for each expense. The XLSX exporter uses `openpyxl`.
-
-- Security & sanitization:
-	- Frontend sanitization now prefers a local `DOMPurify` copy served from
-	`backend/static/js/dompurify.min.js` and `layout.html` includes that script directly.
-	- Templates and scripts were refactored so inline scripts were moved to external JS files (e.g. `backend/static/js/app.js`, `plans_dashboard.js` `view_plan.js`) to better support a strict Content Security Policy (CSP).
-	- `setContentFromHtml` and related helpers use `DOMPurify` when available and fall back to a safe sanitizer if not — reducing the app's XSS surface.
-
-- CSP and CDN handling:
-	- CSP headers are configurable via `backend/config.py` so you can allow required CDN hosts (Bootstrap, Chart.js, fonts) in non-strict deployments. For local-only setups `script-src 'self'` is sufficient because `dompurify.min.js` is served locally.
-
-- Code organization / helpers:
-	- Export builders were moved into `backend/routes/plans/helpers.py`:
-		- `build_plan_xlsx_stream(plan, expenses)` returns an in-memory XLSX BytesIO stream.
-		- `build_plan_csv(plan, expenses)` returns CSV text matching the XLSX layout.
-	- Keeping these builders in `helpers.py` makes them easier to test and reuse.
+- Auth and profiles: session auth, profile edit/change password
+- Plans: create/view/edit/delete or leave; shareable hash IDs; responsive cards on dashboard
+- Expenses: add/edit/delete, per-participant splits (even/custom), grouped by day
+- Reimbursements: greedy settle-up, “Mark as Paid” posts an expense
+- Statistics: Chart.js balances per participant; totals vs real expenses datasets
+- Exports: CSV/XLSX per plan with participant columns (openpyxl)
+- Security: local DOMPurify, CSP-friendly external scripts, safe fallbacks in helpers
+- DX: blueprints, helpers for exports, strict CSP defaults in config
 
 
-What’s implemented and what I learned
--------------------------------------
+What’s implemented and learned
+------------------------------
 
-- Structured a Flask application with an app factory and blueprints (auth, plans)
-- Session-based auth with a custom `@login_required` decorator
-- SQLAlchemy model design with relationships (Plan ↔ Participants, Expenses ↔ Shares)
-- Introduced Alembic/Flask-Migrate for evolving schema reliably (vs `db.create_all()`)
-- Handled SQLite path pitfalls by using absolute `instance/` DB path and ensuring the directory exists
-- Built responsive UI using Bootstrap (grid, cards, list groups, navbar toggler)
-- Wrote modular JS to:
-	- Load plan sections via fetch and inject HTML
-	- Manage form logic (even split vs manual amounts, enabling/disabling inputs)
-	- Avoid duplicate event listeners when reloading sections
-	- Render charts with Chart.js from DOM-extracted data
-- Jinja2 templates: grouping expenses by date, safe iteration over dicts (`.items()`), formatting dates
-- Implement a CI/CD pipeline for automated testing and deployment
-- Implement Security: CSP headers, DOMPurify sanitization, and server-side validation to reduce XSS and injection risks.
+- Flask app factory + blueprints with auth and plans separation
+- SQLAlchemy models with relationships and Alembic migrations (checked in)
+- DOMPurify + CSP-friendly layout and externalized JS to reduce XSS surface
+- Responsive Bootstrap UI, Chart.js integration, modular JS with reload-safe handlers
+- Multi-stage Docker build (test, lint, dev, prod) and Compose wiring (nginx, Postgres, app)
+- CI pipeline with ruff and pytest; migrations auto-run on container start
 
 How to use (quick tour)
 -----------------------
@@ -172,6 +83,45 @@ Screenshots / Demo
 ![Reimbursement Section](docs/reimbursement.jpg)
 ![Statistic Section](docs/statistic.jpg)
 
+
+Install and deploy (Docker)
+---------------------------
+
+- Services: `db` (PostgreSQL 16, volume `postgres_data`), `app` (Gunicorn + Flask), `nginx` (proxy). Entrypoint waits for Postgres and runs `flask db upgrade` before Gunicorn.
+- Env file consumed by `app` (example):
+
+```
+SECRET_KEY=change-me
+DATABASE_URL=postgresql+psycopg://postgres:password@db:5432/mydb
+SESSION_COOKIE_SECURE=false
+```
+
+Install (prod-like)
+-------------------
+
+- Run: `docker compose up -d`
+- Visit: http://localhost:8080 (nginx → app on 8000). Port 443 is exposed for custom TLS if you mount your own certs in nginx.
+- Stop: `docker compose down`
+- Reset data: `docker compose down -v` (drops `postgres_data`).
+
+Develop (hot reload)
+--------------------
+
+- Run dev profile with bind mount and Flask reload:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.override.yml --profile dev up --build
+```
+
+- Access: http://localhost:5000
+- Stop: `docker compose --profile dev down`
+
+Environment variables (containers)
+----------------------------------
+
+- `SECRET_KEY` (required) – session signing key
+- `DATABASE_URL` (required) – e.g., `postgresql+psycopg://postgres:password@db:5432/mydb`
+- `SESSION_COOKIE_SECURE` (optional) – `true` when served over HTTPS
 
 Getting started
 ---------------
@@ -284,98 +234,13 @@ flask db downgrade
 ```
 
 
-CI/CD (GitHub Actions + deployment)
------------------------------------
+CI/CD
+-----
 
-This project is set up to run fast checks in CI and supports two deployment paths: Render (optional push-to-deploy) and PythonAnywhere (pull-based via a scheduled task).
-
-Continuous Integration (CI)
----------------------------
-
-Recommended CI stages:
-
-- Lint: ruff
-- Test: pytest (uses a temporary SQLite file DB via test fixtures)
-
-Ruff configuration and PR‑based workflow
----------------------------------------
-
-This project uses ruff for fast linting and formatting. Configuration is kept in `pyproject.toml` so both local tooling and CI use the same rules. The repository ships a `pyproject.toml` with `line-length = 100` to match our style guide.
-
-Local checks vs CI checks
--------------------------
-
-- Local pre-commit: Developers are encouraged to install `pre-commit` and enable hooks (the repo includes `.pre-commit-config.yaml`) so `ruff format` and `ruff check` run before commits. This improves developer feedback but is not a substitute for CI.
-- CI on Pull Requests (recommended): The authoritative checks run in CI on pull requests. Open a PR and let the CI run linting and tests; require those checks to pass via branch protection before merging.
-
-Example `pyproject.toml` snippet (already in the project):
-
-```toml
-[tool.ruff]
-line-length = 100
-select = ["E", "F", "W", "C", "B"]
-ignore = ["E203"]
-exclude = ["migrations", "instance", "docs", ".venv", "backend/static"]
-```
-
-Example workflow file (create at `.github/workflows/ci.yml`):
-
-```yaml
-name: CI
-
-on:
-	push:
-		branches: [ main ]
-	pull_request:
-		branches: [ main ]
-
-jobs:
-	build-and-test:
-		runs-on: ubuntu-latest
-		steps:
-			- uses: actions/checkout@v4
-			- uses: actions/setup-python@v5
-				with:
-					python-version: '3.11'
-			- name: Install dependencies
-				run: |
-					python -m pip install --upgrade pip
-					pip install -r requirements.txt
-					pip install -r requirements-dev.txt
-			- name: Lint (ruff)
-				run: ruff check .
-			- name: Tests (pytest)
-				run: pytest -q
-```
-
-Notes:
-
-- Dev dependencies are in `requirements-dev.txt` (ruff, pytest, coverage, Flask-Testing, pre-commit).
-- Tests rely on `tests/conftest.py`, which creates a temporary SQLite database per test. No external DB needed in CI.
-
-Recommended PR workflow
------------------------
-
-1. Create a feature branch and make your changes.
-2. Run local checks:
-
-```powershell
-ruff format .
-ruff check .
-pre-commit run --all-files
-pytest -q
-```
-
-3. Push your branch and open a pull request against `main`. The CI runs lint and tests on the PR. Configure GitHub branch protection to require the CI job (`CI / CD`) to pass before merging.
-
-4. When the CI checks are green and reviews are complete, merge via the PR UI.
-
-This approach prevents broken code from reaching `main` and keeps the main branch stable.
-
-Optional: Deploy to Render
---------------------------
-
-If you deploy on Render, use `start.sh` as the Start Command. It runs database migrations and then launches Gunicorn. In your Render service settings:
+- Tests + lint: multi-stage Dockerfile targets `test` (pytest -q) and `lint` (ruff check .).
+- GitHub Actions (example `.github/workflows/ci.yml`): checkout → setup Python 3.11 → install `requirements.txt` + `requirements-dev.txt` → run ruff → run pytest.
+- Pre-commit friendly: repo includes ruff/pytest configs; enable hooks locally for parity.
+- Deploy: container-first. Use the published image (`darkha03/mycount:latest`) with the prod Compose stack; entrypoint auto-applies migrations. Render/PythonAnywhere remain possible but Docker is the primary path.
 
 - Build Command: `pip install -r requirements.txt`
 - Start Command: `bash start.sh`
