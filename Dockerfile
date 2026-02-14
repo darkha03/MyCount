@@ -35,6 +35,21 @@ COPY . .
 CMD ["pytest", "-q"]
 
 # =========================
+# Lint stage
+# =========================
+
+FROM base AS lint
+
+# Install linting tools
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+COPY . .
+
+# Run ruff lint
+CMD ["ruff", "check", "."]
+
+# =========================
 # Development stage
 # =========================
 
