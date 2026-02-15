@@ -303,7 +303,7 @@ function loadStatistics(planId) {
     .then(html => {
       const planContent = document.getElementById("plan-content");
       setContentFromHtml(planContent, html);
-      renderBalanceChart();
+      renderStatisticChart();
     });
     
 }

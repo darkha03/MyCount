@@ -1,28 +1,42 @@
-<h5>Reimbursements</h5>
-<p>This will list all reimbursements needed to settle the balances.</p>
-<br>
+<div class="section-heading mb-4">
+  <div>
+    <h3 class="mb-0">Reimbursements</h3>
+    <p class="text-muted small mb-0">Settle balances between participants</p>
+  </div>
+</div>
 
 {% if reimbursements %}
 <ul class="list-group gap-2">
     {% for reimbursement in reimbursements %}
     <div class="reimbursement-item">
-        <li class="list-group-item py-2">
-            <div class="d-flex justify-content-between align-items-center w-100">
-            <span class="fw-bold">From {{ reimbursement.from }}</span>
-            <span>to: {{ reimbursement.to }}</span>
-            <span>Amount: {{ reimbursement.amount }}</span>
-            <button class="btn btn-sm btn-outline-primary paid-btn"
-                data-from="{{ reimbursement.from }}"
-                data-to="{{ reimbursement.to }}"
-                data-amount="{{ reimbursement.amount }}"
-            >Is paid</button>
+        <li class="list-group-item py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-3 flex-grow-1">
+                <i class="bi bi-arrow-right-circle text-primary fs-4"></i>
+                <div>
+                  <div class="fw-bold">{{ reimbursement.from }} <i class="bi bi-arrow-right mx-1"></i> {{ reimbursement.to }}</div>
+                  <div class="text-muted small">Settlement payment</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success rounded-pill fs-6">{{ '%.2f'|format(reimbursement.amount) }}</span>
+                <button class="btn btn-sm btn-outline-success paid-btn"
+                    data-from="{{ reimbursement.from }}"
+                    data-to="{{ reimbursement.to }}"
+                    data-amount="{{ reimbursement.amount }}"
+                ><i class="bi bi-check-circle me-1"></i>Mark Paid</button>
+              </div>
             </div>
         </li>
     </div>
     {% endfor %}
 </ul>
 {% else %}
-<div class="alert alert-info mt-3">
-    All balances are settled. No reimbursement needed!
+<div class="card text-center p-5">
+  <div class="card-body">
+    <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+    <h5>All Settled Up!</h5>
+    <p class="text-muted">No reimbursements needed. All balances are even.</p>
   </div>
+</div>
 {% endif %}
