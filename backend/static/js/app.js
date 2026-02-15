@@ -402,7 +402,7 @@ function renderStatisticChart() {
       plugins: {
         title: {
           display: true,
-          text: `Plan total expense: $${planTotal.toFixed(2)}`,
+          text: `Plan total expense: ${planTotal.toFixed(2)}`,
           font: { size: 16 }
         },
         legend: { position: 'top' }

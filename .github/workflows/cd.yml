@@ -26,6 +26,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          target: production
           push: true
           tags: |
             darkha03/mycount:latest
@@ -40,6 +41,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /path/to/your/app
+            cd ./mycount
             docker-compose pull
             docker-compose up -d

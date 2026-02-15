@@ -1,4 +1,4 @@
-{% block title %}Expense Details{% endblock %}
+{% block title %}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-center">
       <div>
         <span class="eyebrow">Expense Detail</span>
-        <h2 class="mb-0">{{ expense.title }}</h2>
+        <h2 class="mb-0">{{ expense.name }}</h2>
       </div>
       <a href="/plans/{{ plan.hash_id }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back
