@@ -22,7 +22,7 @@ Project structure (high level)
 - tests/: Pytest suite (fixtures + feature/unit coverage)
 - Dockerfile: multi-stage (test, lint, dev, prod)
 - docker-compose.yml: prod-ish stack (app, nginx, Postgres, volume)
-- docker-compose.override.yml: dev profile (bind mount, reload on code change)
+- docker-compose.dev.yml: dev profile (bind mount, reload on code change)
 - entrypoint.sh: waits for Postgres, applies migrations, starts Gunicorn
 
 Features (high level)
