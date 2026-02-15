@@ -268,6 +268,72 @@ h1 {
   font-size: 1.05rem;
 }
 
+/* Auth pages (login/register) */
+.auth-page main {
+  max-width: 100%;
+  padding: 0;
+}
+
+.auth-hero {
+  background: radial-gradient(circle at 10% 20%, rgba(13,110,253,0.15), transparent 25%),
+              radial-gradient(circle at 80% 0%, rgba(32,201,151,0.18), transparent 30%),
+              #0b1324;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 60px 0;
+}
+
+.auth-form-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.auth-form-card h2 {
+  color: var(--ink);
+  font-size: 1.75rem;
+}
+
+.auth-form-card .text-muted {
+  color: var(--muted) !important;
+}
+
+.auth-form-card .form-label {
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+
+.auth-form-card .form-control {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-form-card .form-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+}
+
+.auth-form-card hr {
+  border-color: var(--border);
+  opacity: 0.5;
+}
+
+@media (max-width: 767.98px) {
+  .auth-hero {
+    padding: 40px 20px;
+  }
+  
+  .auth-form-card {
+    padding: 30px 24px;
+  }
+}
+
 /* Global elements */
 .card {
   border: 1px solid var(--border);
