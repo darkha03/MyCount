@@ -1,0 +1,28 @@
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: darkha03/mycount:dev
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:

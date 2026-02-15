@@ -62,8 +62,7 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY . .
 
 # Run the application in development mode with auto-reload
-CMD ["flask", "--app", "backend.app:create_app", "run", "--host=0.0.0.0", "--port", "5000", "--debug"]
-
+CMD ["sh", "-c", "flask --app backend.app:create_app db upgrade && flask --app backend.app:create_app run --host=0.0.0.0 --port=5000 --debug"]
 
 # =========================
 # Production stage

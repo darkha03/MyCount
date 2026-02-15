@@ -110,7 +110,7 @@ Develop (hot reload)
 - Run dev profile with bind mount and Flask reload:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.override.yml --profile dev up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 - Access: http://localhost:5000
