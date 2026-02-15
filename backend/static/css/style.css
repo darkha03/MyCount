@@ -83,3 +83,115 @@ h1 {
   }
 }
 
+/* Landing page */
+.landing-hero {
+  background: radial-gradient(circle at 10% 20%, rgba(13,110,253,0.15), transparent 25%),
+              radial-gradient(circle at 80% 0%, rgba(32,201,151,0.18), transparent 30%),
+              #0b1324;
+  color: #f8f9fa;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.landing-hero h1 { color: #fff; }
+.landing-hero .lead { color: #f4f7ff; }
+.landing-hero .text-muted,
+.landing-hero .small {
+  color: #e9efff !important;
+}
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.08);
+  color: #e5edff;
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.landing-preview {
+  background: #0f182b;
+  color: #cbd4e3;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.landing-preview .list-group-item {
+  background: transparent;
+  color: #737373;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.landing-preview .text-muted {
+  color: #4c525c !important;
+}
+
+.landing-feature {
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.landing-feature:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.icon-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(13,110,253,0.1);
+  display: grid;
+  place-items: center;
+  color: #0d6efd;
+  font-size: 1.2rem;
+}
+
+.landing-steps {
+  background: linear-gradient(135deg, rgba(13,110,253,0.05), rgba(32,201,151,0.05));
+}
+
+.step-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.step-number {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: #0d6efd;
+  color: #fff;
+  font-weight: 700;
+}
+
+.landing-cta {
+  box-shadow: 0 8px 24px rgba(13,110,253,0.25);
+}
+
+.landing-nav {
+  background: #0b1324;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.landing-logo {
+  width: 32px;
+  height: 32px;
+}
+
+.landing-brand {
+  color: #f8f9fa;
+  letter-spacing: 0.4px;
+  font-size: 1.05rem;
+}
+

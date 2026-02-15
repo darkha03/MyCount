@@ -233,6 +233,16 @@ flask db history
 flask db downgrade
 ```
 
+Local test
+-----
+
+Run the local test with docker
+```bash
+docker build --target test -t mycount-test .
+docker run --rm mycount-test
+docker build --target lint -t mycount-lint .
+docker run --rm mycount-lint
+```
 
 CI/CD
 -----

@@ -76,7 +76,7 @@ def logout():
     if user and user.is_guest:
         delete_guest_user(user)
     session.clear()
-    return redirect(url_for("auth.login"))
+    return redirect(url_for("index"))
 
 
 @auth_bp.route("/guestlogin", methods=["GET"])
