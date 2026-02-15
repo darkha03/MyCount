@@ -296,6 +296,8 @@ def export_plan_xlsx(hash_id):
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
     return jsonify({"error": "Plan not found"}), 404
+
+
 @plans_bp.route("/api/plans/<hash_id>/expenses", methods=["GET"])
 @login_required
 def get_plan_expenses_api(hash_id):

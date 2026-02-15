@@ -3,31 +3,47 @@
 
 {% block content %}
 
-<div class="container-fluid mt-3">
+<div class="container-fluid">
   <div class="row">
-    <div class="col-md-3 col-sm-12 border-end">
-        <div class="d-flex align-items-center justify-content-between">
-          <h4 class="mb-0">{{ plan.name }}</h4>
-          <div>
-            <a href="/plans/" class="btn btn-outline-secondary btn-sm ms-2">Return to Plans</a>
-          </div>
-        </div>      
-      <ul class="nav flex-column nav-pills mt-4">
-        <li class="nav-item">
-          <a class="nav-link active" href="#" data-section="expenses">🧾 Expenses</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#" data-section="reimbursements">💸 Reimbursements</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#" data-section="statistics">📊 Statistics</a>
-        </li>
-      </ul>
-      <div class="mt-3" >
-        <a  href="{{ url_for('plans.export_plan_csv', hash_id=plan.hash_id) }}" class="btn btn-success btn-sm ms-2">Download as CSV</a>
+    <div class="col-md-3 col-sm-12 border-end pe-4">
+      <div class="page-hero mb-3">
+        <h4 class="mb-1">{{ plan.name }}</h4>
+        <a href="/plans/" class="btn btn-outline-secondary btn-sm mt-2">
+          <i class="bi bi-arrow-left me-1"></i>Back to Plans
+        </a>
       </div>
-      <div class="mt-3" >
-        <a  href="{{ url_for('plans.export_plan_xlsx', hash_id=plan.hash_id) }}" class="btn btn-success btn-sm ms-2">Download as XLSX</a>
+      
+      <div class="mb-4">
+        <h6 class="text-uppercase text-muted small mb-3">Navigation</h6>
+        <ul class="nav flex-column nav-pills">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" data-section="expenses">
+              <i class="bi bi-receipt me-2"></i>Expenses
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-section="reimbursements">
+              <i class="bi bi-arrow-left-right me-2"></i>Reimbursements
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-section="statistics">
+              <i class="bi bi-bar-chart me-2"></i>Statistics
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mt-4">
+        <h6 class="text-uppercase text-muted small mb-3">Export</h6>
+        <div class="d-flex flex-column gap-2">
+          <a href="{{ url_for('plans.export_plan_csv', hash_id=plan.hash_id) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV
+          </a>
+          <a href="{{ url_for('plans.export_plan_xlsx', hash_id=plan.hash_id) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>XLSX
+          </a>
+        </div>
       </div>
     </div>
 

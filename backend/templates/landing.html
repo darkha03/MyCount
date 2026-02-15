@@ -1,0 +1,183 @@
+{% extends "layout.html" %}
+{% block title %}Welcome{% endblock %}
+{% block body_class %}landing-page{% endblock %}
+
+{% block content %}
+<nav class="landing-nav">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="MyCount logo" class="landing-logo">
+      <span class="landing-brand fw-bold">MyCount</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-outline-light btn-sm" href="/login">Log in</a>
+      <a class="btn btn-primary btn-sm" href="/register">Register</a>
+    </div>
+  </div>
+</nav>
+
+<section class="landing-hero py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <span class="pill-tag">Shared expenses, simplified</span>
+        <h1 class="display-5 fw-bold mt-3">Track plans, split costs, and settle up with confidence.</h1>
+        <p class="lead text-muted mt-3">MyCount helps teams, roommates, and friends stay in sync on spending with transparent balances, reimbursements, and real-time plan updates.</p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a class="btn btn-primary btn-lg landing-cta" href="/register">Get started</a>
+          <a class="btn btn-outline-light btn-lg" href="/login">Log in</a>
+          <a class="btn btn-outline-secondary btn-lg" href="/guestlogin">Try as guest</a>
+        </div>
+        <div class="d-flex flex-wrap gap-3 mt-4 small text-muted">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-lock-fill"></i>
+            <span>Your data stays private</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history"></i>
+            <span>Built for quick onboarding</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6 mt-4 mt-lg-0">
+        <div class="card shadow-sm border-0 landing-preview">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 class="mb-0">Recent plans</h5>
+                <small class="text-muted">See participation at a glance</small>
+              </div>
+              <span class="badge text-bg-primary">Live</span>
+            </div>
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex justify-content-between">
+                <div>
+                  <strong>Team Offsite</strong>
+                  <div class="text-muted small">5 participants · $1,240 total</div>
+                </div>
+                <span class="text-success fw-semibold">Settling</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between">
+                <div>
+                  <strong>Roommates Utilities</strong>
+                  <div class="text-muted small">4 participants · $630 total</div>
+                </div>
+                <span class="text-warning fw-semibold">In progress</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between">
+                <div>
+                  <strong>Group Trip</strong>
+                  <div class="text-muted small">6 participants · $2,180 total</div>
+                </div>
+                <span class="text-primary fw-semibold">Active</span>
+              </div>
+            </div>
+            <div class="mt-4">
+              <h6 class="text-muted text-uppercase">Reimbursements</h6>
+              <div class="d-flex flex-column gap-2 mt-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span><strong>Alex</strong> owes Jamie</span>
+                  <span class="fw-semibold">$64.50</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span><strong>You</strong> receive from Sam</span>
+                  <span class="fw-semibold">$120.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span><strong>Priya</strong> owes Taylor</span>
+                  <span class="fw-semibold">$42.75</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm landing-feature">
+          <div class="card-body">
+            <div class="icon-circle mb-3"><i class="bi bi-people"></i></div>
+            <h4 class="card-title">Collaborative plans</h4>
+            <p class="text-muted">Invite friends or teammates, track shared expenses, and keep everyone aligned with clear visibility into who paid what.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm landing-feature">
+          <div class="card-body">
+            <div class="icon-circle mb-3"><i class="bi bi-calculator"></i></div>
+            <h4 class="card-title">Instant balances</h4>
+            <p class="text-muted">Automatic balance calculations and reimbursement suggestions cut through the math so you can settle up quickly.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm landing-feature">
+          <div class="card-body">
+            <div class="icon-circle mb-3"><i class="bi bi-shield-check"></i></div>
+            <h4 class="card-title">Secure by design</h4>
+            <p class="text-muted">Session-based access, guest expiry safeguards, and sensible defaults keep your data protected while you collaborate.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="landing-steps py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-5 mb-4 mb-lg-0">
+        <h3 class="fw-bold">Get going in minutes</h3>
+        <p class="text-muted">Skip the spreadsheets. Create a plan, invite people, add expenses, and let MyCount keep balances in check.</p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a class="btn btn-primary" href="/register">Create an account</a>
+          <a class="btn btn-outline-dark" href="/login">Log in</a>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="step-card h-100">
+              <span class="step-number">1</span>
+              <h6 class="mt-2 mb-1">Start a plan</h6>
+              <p class="text-muted small mb-0">Create a plan for a trip, team, or household in seconds.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="step-card h-100">
+              <span class="step-number">2</span>
+              <h6 class="mt-2 mb-1">Add expenses</h6>
+              <p class="text-muted small mb-0">Log purchases as they happen and tag who participated.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="step-card h-100">
+              <span class="step-number">3</span>
+              <h6 class="mt-2 mb-1">Settle instantly</h6>
+              <p class="text-muted small mb-0">See suggested reimbursements and settle up with clarity.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5 bg-light">
+  <div class="container text-center">
+    <h3 class="fw-bold">Ready to streamline your shared expenses?</h3>
+    <p class="text-muted mb-4">Create your first plan for free, invite collaborators, and keep every reimbursement transparent.</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a class="btn btn-primary btn-lg" href="/register">Create an account</a>
+      <a class="btn btn-outline-dark btn-lg" href="/guestlogin">Start as guest</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

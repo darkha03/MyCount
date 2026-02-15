@@ -2,30 +2,26 @@
 
 {% block title %}Plans{% endblock %}
 {% block content %}
-  <div class="d-flex justify-content-center align-items-center mb-3 p-2 rounded" style="background-color: aquamarine;">
-    <h1>Plans Dashboard</h1>
+  <div class="container">
+    <div class="page-hero">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <span class="eyebrow">Manage</span>
+          <h1 class="mb-0">Plans Dashboard</h1>
+          <p class="muted mb-0">Create, join, and manage your shared expense plans</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+            <i class="bi bi-plus-circle me-1"></i>Create Plan
+          </button>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#joinPlanModal">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Join Plan
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="plan-list" class="row row-cols-1 row-cols-md-2 g-4"></div>
   </div>
-  <div class="mb-4 justify-content-center d-flex gap-2">
-  <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addPlanModal">Create New Plan</button>
-  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#joinPlanModal">Join Existing Plan</button>
-  </div>
-  <style>
-  /* Ensure action buttons/badges share the same width and fill the action container */
-  .action-div {
-    display: inline-block;
-    min-width: 60px;
-    vertical-align: middle;
-  }
-  .action-div > * {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 100% !important;
-    box-sizing: border-box;
-    white-space: nowrap;
-  }
-  </style>
-  <div id="plan-list" class="row row-cols-1 row-cols-md-2 g-4"></div>
   <!-- Modal for adding new plan -->
   <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
     <div class="modal-dialog">

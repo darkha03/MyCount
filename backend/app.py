@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, session
+from flask import Flask, jsonify, render_template, session, redirect
 import os
 from flask_cors import CORS
 from backend.routes.plans import (
@@ -9,7 +9,6 @@ from backend.routes.plans import (
 )
 from backend.routes.auth import auth_bp
 from backend.models import db, User, Plan, PlanParticipant, Expense
-from backend.utils.auth import login_required
 from flask_migrate import Migrate
 from sqlalchemy.engine.url import make_url
 from pathlib import Path
@@ -19,9 +18,10 @@ from datetime import timezone
 migrate = Migrate()
 
 
-@login_required
 def index():
     username = session.get("username")
+    if not username:
+        return redirect("/home")
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -62,6 +62,12 @@ def index():
     return render_template("index.html", plans=user_plans, reimbursments=user_reimbursements)
 
 
+def landing():
+    if session.get("username"):
+        return redirect("/")
+    return render_template("landing.html", show_header=False)
+
+
 def create_app():
     # Keep create_app small and delegate initialization to helpers
     app = Flask(__name__)
@@ -74,6 +80,8 @@ def create_app():
 
     # Register top-level views
     app.add_url_rule("/", "index", index)
+    app.add_url_rule("/home", "landing", landing)
+    app.add_url_rule("/landing", "landing_alias", landing)
 
     return app
 

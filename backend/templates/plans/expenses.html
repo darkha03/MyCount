@@ -1,24 +1,28 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h5>Expenses</h5>
-  <button class="btn btn-primary" id="addExpenseBtn" data-bs-toggle="modal" data-bs-target="#addExpenseModal">Add Expense</button>
+<div class="section-heading mb-4">
+  <div>
+    <h3 class="mb-0">Expenses</h3>
+    <p class="text-muted small mb-0">Track all spending for this plan</p>
+  </div>
+  <button class="btn btn-primary" id="addExpenseBtn" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+    <i class="bi bi-plus-circle me-1"></i>Add Expense
+  </button>
 </div>
-<p>This will list all expenses in the expense.</p>
 
 <ul class="list-group gap-2">
   {% for date in sorted_dates %}
-    <li class="list-group-item bg-light fw-bold">
-      {{ date }}
+    <li class="list-group-item bg-light border-0 py-2">
+      <span class="eyebrow">{{ date }}</span>
     </li>
     {% for expense in expenses_by_date[date] %}
       <div class="expense-item">
-        <li class="list-group-item py-3" style="cursor:pointer;" data-id="{{ expense.id }}">
+        <li class="list-group-item py-3 border-0" style="cursor:pointer; border-left: 3px solid var(--accent) !important;" data-id="{{ expense.id }}">
           <div class="d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-center w-100">
+            <div class="d-flex justify-content-between align-items-center w-100 mb-2">
               <span class="fw-bold">{{ expense.name }}</span>
-              <span class="fw-bold">Amount: {{ expense.amount }}</span>
+              <span class="badge bg-primary rounded-pill">{{ '%.2f'|format(expense.amount) }}</span>
             </div>
-            <div class="text-muted small mt-1">
-              Payed by: {{ expense.payer }}
+            <div class="text-muted small">
+              <i class="bi bi-person-fill me-1"></i>Paid by {{ expense.payer }}
             </div>
           </div>
         </li>

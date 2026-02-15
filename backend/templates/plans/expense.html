@@ -1,33 +1,65 @@
-{% block title %}Expense Details{% endblock %}
+{% block title %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Expense Detail</h4>
-    <a href="/plans/{{ plan.hash_id }}" class="btn btn-outline-secondary">← Back to Expenses</a>
+<div class="container">
+  <div class="page-hero mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <span class="eyebrow">Expense Detail</span>
+        <h2 class="mb-0">{{ expense.name }}</h2>
+      </div>
+      <a href="/plans/{{ plan.hash_id }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
   </div>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title">{{ expense.title }}</h5>
-      <p class="card-text">
-        <strong>Amount:</strong> {{ "%.2f"|format(expense.amount) }} € <br>
-        <strong>Date:</strong> {{ expense.date[8:10] }}/{{ expense.date[5:7] }}/{{ expense.date[0:4] }}<br>
-        <strong>Payer:</strong> {{ expense.payer }} <br>
-        <strong>Participants:</strong>
-        <ul>
-          {% for participant, amount in zip(expense.participants, expense.amounts) %}
-            <li>{{ participant }} : {{ amount }}</li>
-          {% endfor %}
-        </ul>
-      </p>
-
-      <div class="d-flex gap-2 mt-3">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modifyExpenseModal">
-          ✏️ Modify
-        </button>
-         <button class="btn btn-danger" data-id="{{expense.id}}" onclick="deleteExpense()">🗑️ Delete</button>
-        </form>
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-4">Details</h5>
+          <dl class="row">
+            <dt class="col-sm-3">Amount</dt>
+            <dd class="col-sm-9">
+              <span class="badge bg-primary fs-6">{{ "%.2f"|format(expense.amount) }}</span>
+            </dd>
+            
+            <dt class="col-sm-3">Date</dt>
+            <dd class="col-sm-9">{{ expense.date[8:10] }}/{{ expense.date[5:7] }}/{{ expense.date[0:4] }}</dd>
+            
+            <dt class="col-sm-3">Paid by</dt>
+            <dd class="col-sm-9"><i class="bi bi-person-fill me-1"></i>{{ expense.payer }}</dd>
+            
+            <dt class="col-sm-3">Participants</dt>
+            <dd class="col-sm-9">
+              <ul class="list-unstyled mb-0">
+                {% for participant, amount in zip(expense.participants, expense.amounts) %}
+                  <li class="mb-1">
+                    <i class="bi bi-check-circle text-success me-1"></i>
+                    {{ participant }}: {{ '%.2f'|format(amount) }}
+                  </li>
+                {% endfor %}
+              </ul>
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-title mb-3">Actions</h6>
+          <div class="d-grid gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modifyExpenseModal">
+              <i class="bi bi-pencil me-1"></i>Modify
+            </button>
+            <button class="btn btn-danger" data-id="{{expense.id}}">
+              <i class="bi bi-trash me-1"></i>Delete
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
