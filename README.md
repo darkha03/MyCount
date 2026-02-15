@@ -114,7 +114,7 @@ docker compose -f docker-compose.dev.yml up --build
 ```
 
 - Access: http://localhost:5000
-- Stop: `docker compose --profile dev down`
+- Stop: `docker compose -f docker-compose.dev.yml down`
 
 Environment variables (containers)
 ----------------------------------
