@@ -9,7 +9,12 @@ def delete_guest_user(user):
         username = user.username
 
         # Plans the guest created (remove everything linked to them)
-        plan_ids = [p.id for p in Plan.query.filter_by(created_by=user.id).all()]
+        owned_plans = Plan.query.filter_by(created_by=user.id).all()
+        # Detach plan objects so later attribute access (e.g., plan.id in tests)
+        # does not trigger a refresh after the rows are deleted.
+        for p in owned_plans:
+            db.session.expunge(p)
+        plan_ids = [p.id for p in owned_plans]
         if plan_ids:
             # Remove expense shares first to avoid FK issues when deleting expenses
             expense_ids_subq = db.session.query(Expense.id).filter(Expense.plan_id.in_(plan_ids))
