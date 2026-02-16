@@ -72,7 +72,7 @@ Note: Most plan actions are under the `plans` blueprint and require login.
 Screenshots / Demo
 ---------------------------------
 
-- Live demo: https://darkha03.pythonanywhere.com/
+- Live demo: https://mycount.online/
 
 - Screenshots: 
 
@@ -248,42 +248,10 @@ CI/CD
 -----
 
 - Tests + lint: multi-stage Dockerfile targets `test` (pytest -q) and `lint` (ruff check .).
-- GitHub Actions (example `.github/workflows/ci.yml`): checkout → setup Python 3.11 → install `requirements.txt` + `requirements-dev.txt` → run ruff → run pytest.
+- GitHub Actions CI (`.github/workflows/ci.yml`): checkout → setup Python 3.11 → install `requirements.txt` + `requirements-dev.txt` → run ruff → run pytest.
 - Pre-commit friendly: repo includes ruff/pytest configs; enable hooks locally for parity.
-- Deploy: container-first. Use the published image (`darkha03/mycount:latest`) with the prod Compose stack; entrypoint auto-applies migrations. Render/PythonAnywhere remain possible but Docker is the primary path.
-
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `bash start.sh`
-
-Environment variables on Render (Dashboard → Environment):
-
-- `SECRET_KEY` (required)
-- `DATABASE_URL` (required; e.g., `postgresql+psycopg://user:pass@host:6543/dbname`)
-
-Optional GitHub Actions deploy step (requires secrets):
-
-- `RENDER_API_KEY`: a Render API key
-- `RENDER_SERVICE_ID`: the service ID to deploy
-
-Deploy job example (add to the same workflow and gate on `main`):
-
-```yaml
-	deploy-render:
-		if: github.ref == 'refs/heads/main'
-		needs: build-and-test
-		runs-on: ubuntu-latest
-		steps:
-			- uses: actions/checkout@v4
-			- name: Trigger Render deploy
-				env:
-					RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-					RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-				run: |
-					curl -s -X POST \
-						-H "Authorization: Bearer $RENDER_API_KEY" \
-						-H "Content-Type: application/json" \
-						https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys
-```
+- Deploy (DigitalOcean VPS via Docker Hub): `.github/workflows/cd.yml` builds the `production` target, pushes `darkha03/mycount:latest` and a SHA tag to Docker Hub, then SSHes into the VPS and runs `docker compose pull && docker compose up -d`.
+- Required secrets for CD: `DOCKER_USERNAME`, `DOCKER_PASSWORD`, `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
 
 PythonAnywhere deployment (pull-based)
 --------------------------------------
