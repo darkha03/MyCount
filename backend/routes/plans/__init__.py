@@ -529,20 +529,28 @@ def get_plan_reimbursements(hash_id):
 def calculate_balance(expenses):
     balances = {}
     for expense in expenses:
-        payer = expense["payer"]
-        amount = expense["amount"]
-        participants = expense["participants"]
-        amount_details = expense["amount_details"]
+        payer = expense.get("payer")
+        amount = expense.get("amount", 0) or 0
+        participants = expense.get("participants") or []
+        amount_details = expense.get("amount_details") or {}
+
+        # Ensure payer key exists before any arithmetic
+        if payer is not None and payer not in balances:
+            balances[payer] = 0
 
         for participant in participants:
             if participant not in balances:
                 balances[participant] = 0
+            share = amount_details.get(participant, 0) or 0
             if participant == payer:
-                balances[participant] += amount - amount_details[participant]
+                balances[participant] += amount - share
             else:
-                balances[participant] -= amount_details[participant]
-        if payer not in participants:
+                balances[participant] -= share
+
+        # If payer is outside participants, credit full amount to payer bucket
+        if payer is not None and payer not in participants:
             balances[payer] += amount
+
     for k in balances:
         balances[k] = round(balances[k], 2)
     return balances
