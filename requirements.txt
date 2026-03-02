@@ -18,3 +18,5 @@ psycopg==3.2.12
 mysqlclient==2.2.0
 et-xmlfile==2.0.0
 openpyxl==3.1.5
+prometheus-flask-exporter==0.23.2
+prometheus-client==0.24.1

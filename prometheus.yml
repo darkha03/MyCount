@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+  
+scrape_configs:
+  - job_name: 'mycount'
+    static_configs:
+      - targets: ['app-dev:5000']
