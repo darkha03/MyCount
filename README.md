@@ -56,18 +56,6 @@ How to use (quick tour)
 - View reimbursements and optionally “Mark as Paid” to settle
 - See statistics (balances, totals) and a bar chart summarizing the plan
 
-API/Routes (selected)
----------------------
-
-- `GET /` → Dashboard (recent plans, reimbursements)
-- `GET /plans` → Plans dashboard (cards)
-- `GET /plans/<hash_id>` → View plan with sections (expenses, reimbursements, statistics)
-- `GET /plans/api/plans` → JSON list of user’s plans
-- `POST /plans/api/plans` → Create a new plan
-- `PUT /plans/api/plans/<plan_id>` → Modify plan
-- `DELETE /plans/api/plans/<plan_id>` → Leave/delete plan
-
-Note: Most plan actions are under the `plans` blueprint and require login.
 
 Screenshots / Demo
 ---------------------------------
@@ -76,10 +64,10 @@ Screenshots / Demo
 
 - Screenshots: 
 
+![Welcome](docs/home.jpg)
 ![Dashboard](docs/dashboard.jpg)
 ![Plan Details](docs/plan.jpg)
 ![Expenses Section](docs/expense.jpg)
-![Create Expense](docs/create-expense.jpg)
 ![Reimbursement Section](docs/reimbursement.jpg)
 ![Statistic Section](docs/statistic.jpg)
 
@@ -242,6 +230,14 @@ docker build --target test -t mycount-test .
 docker run --rm mycount-test
 docker build --target lint -t mycount-lint .
 docker run --rm mycount-lint
+```
+
+Rebuild and push dev image
+--------------------------
+
+```bash
+docker build --target development -t darkha03/mycount:dev .
+docker push darkha03/mycount:dev
 ```
 
 CI/CD

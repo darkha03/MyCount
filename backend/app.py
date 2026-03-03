@@ -13,6 +13,7 @@ from flask_migrate import Migrate
 from sqlalchemy.engine.url import make_url
 from pathlib import Path
 from datetime import timezone
+from prometheus_flask_exporter import PrometheusMetrics
 
 # Initialize Flask-Migrate (database migrations)
 migrate = Migrate()
@@ -69,9 +70,10 @@ def landing():
 
 
 def create_app():
-    # Keep create_app small and delegate initialization to helpers
     app = Flask(__name__)
     app.config.from_object("backend.config.Config")
+
+    PrometheusMetrics(app)
 
     _init_extensions(app)
     _register_blueprints(app)
@@ -171,8 +173,6 @@ def _configure_csp(app: Flask):
         return response
 
 
-app = create_app()
-
-
 if __name__ == "__main__":
+    app = create_app()
     app.run(debug=True)
